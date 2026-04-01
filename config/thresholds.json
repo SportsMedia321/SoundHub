@@ -1,0 +1,57 @@
+{
+  "tier_1": {
+    "categories": ["NFL", "NBA"],
+    "min_views_in_6hr": 500000,
+    "min_engagement_rate": 0.05,
+    "min_shares_in_4hr": 10000,
+    "recency_gate_hours": 48,
+    "ttl_hours": 48,
+    "tiktok_velocity_multiplier": 1.5
+  },
+  "tier_2": {
+    "categories": ["MLB", "NHL", "MLS", "US Intl"],
+    "min_views_in_6hr": 750000,
+    "min_engagement_rate": 0.07,
+    "min_shares_in_4hr": 15000,
+    "recency_gate_hours": 48,
+    "ttl_hours": 48,
+    "tiktok_velocity_multiplier": 1.5
+  },
+  "misc": {
+    "categories": ["MISC"],
+    "discovery_primary": "account_seed",
+    "discovery_secondary": "hashtag_confirmation",
+    "hashtags_monitored": [
+      "#SportsMoment", "#ViralSports", "#AthleteOfTheDay",
+      "#SportsHighlight", "#Highlights", "#AmazingAthletes",
+      "#CollegeSports", "#MMA", "#UFC", "#Extremesports"
+    ],
+    "min_views_in_6hr": 1500000,
+    "min_engagement_rate": 0.10,
+    "min_shares_in_4hr": 25000,
+    "recency_gate_hours": 48,
+    "ttl_hours": 48,
+    "tiktok_velocity_multiplier": 1.5
+  },
+  "global": {
+    "scrape_priority": "account_seed_first",
+    "tiktok_priority": true,
+    "target_clips_per_24hr": 35,
+    "auto_refresh_interval_hr": 12,
+    "account_seed_refresh_days": 14,
+    "max_seeded_accounts_per_category": 20,
+    "pin_official_accounts": true,
+    "delete_after_publish": true,
+    "viral_score_weights": {
+      "views_velocity": 0.35,
+      "shares_velocity": 0.30,
+      "engagement_rate": 0.25,
+      "recency": 0.10
+    },
+    "platform_formats": {
+      "tiktok":    { "aspect": "9:16", "max_duration": 60,  "audio_boost": true },
+      "instagram": { "aspect": "9:16", "max_duration": 90,  "audio_boost": false },
+      "youtube":   { "aspect": "9:16", "max_duration": 60,  "audio_boost": false }
+    }
+  }
+}
