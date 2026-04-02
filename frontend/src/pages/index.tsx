@@ -65,7 +65,6 @@ export default function App() {
         "--fm": "'DM Mono', monospace",
       } as React.CSSProperties}
       className="flex flex-col h-screen overflow-hidden font-sans"
-      style2={{ background: "var(--s0)", color: "var(--t)" } as any}
     >
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
