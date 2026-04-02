@@ -1,4 +1,5 @@
 import React from "react";
+function clsx(...args: (string | false | undefined | null)[]): string { return args.filter(Boolean).join(" "); }
 
 // ── Button ─────────────────────────────────────────────────────────────────
 interface BtnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
