@@ -1,5 +1,4 @@
 import React from "react";
-import { clsx } from "../lib/utils";
 
 // ── Button ─────────────────────────────────────────────────────────────────
 interface BtnProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
