@@ -35,11 +35,19 @@ SEEN_URLS: set = set()
 # ── Scraping helpers ───────────────────────────────────────────────────────
 
 def scrape_tiktok_account_snscrape(handle: str) -> list:
-    """Primary: lightweight snscrape for TikTok public posts."""
+    """Use yt-dlp to get TikTok account videos and metadata."""
     try:
+        url = f"https://www.tiktok.com/{handle}"
         result = subprocess.run(
-           ["snscrape", "--jsonl", "--max-results", "15", f"tiktok-user:{handle.lstrip('@')}"],
-capture_output=True, text=True, timeout=30
+            [
+                "yt-dlp",
+                "--flat-playlist",
+                "--print-json",
+                "--playlist-end", "15",
+                "--no-warnings",
+                url,
+            ],
+            capture_output=True, text=True, timeout=60
         )
         posts = []
         for line in result.stdout.strip().split("\n"):
@@ -48,15 +56,15 @@ capture_output=True, text=True, timeout=30
             try:
                 p = json.loads(line)
                 posts.append({
-                    "url": p.get("url", ""),
-                    "views_at_ingest": p.get("playCount", 0),
-                    "likes_at_ingest": p.get("diggCount", 0),
-                    "comments_at_ingest": p.get("commentCount", 0),
-                    "shares_at_ingest": p.get("shareCount", 0),
-                    "saves_at_ingest": p.get("collectCount", 0),
-                    "caption": p.get("desc", ""),
-                    "duration_seconds": p.get("video", {}).get("duration", 0),
-                    "posted_at": p.get("createTime", ""),
+                    "url": p.get("webpage_url", f"https://www.tiktok.com/{handle}"),
+                    "views_at_ingest": p.get("view_count", 0) or 0,
+                    "likes_at_ingest": p.get("like_count", 0) or 0,
+                    "comments_at_ingest": p.get("comment_count", 0) or 0,
+                    "shares_at_ingest": p.get("repost_count", 0) or 0,
+                    "saves_at_ingest": p.get("collect_count", 0) or 0,
+                    "caption": p.get("description", "")[:500],
+                    "duration_seconds": int(p.get("duration", 0) or 0),
+                    "posted_at": str(p.get("upload_date", "")),
                     "platform": "tiktok",
                     "source_account": handle,
                 })
@@ -64,7 +72,7 @@ capture_output=True, text=True, timeout=30
                 continue
         return posts
     except Exception as e:
-        print(f"snscrape failed for {handle}: {e}")
+        print(f"yt-dlp failed for {handle}: {e}")
         return []
 
 
