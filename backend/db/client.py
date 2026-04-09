@@ -16,10 +16,8 @@ def get_db() -> Client:
     if _client is None:
         url = os.environ["SUPABASE_URL"]
         key = os.environ["SUPABASE_SERVICE_KEY"]
-        from supabase.lib.client_options import ClientOptions
-        options = ClientOptions()
-        options.httpx_client_args = {"http2": False}
-        _client = create_client(url, key, options=options)
+        _client = create_client(url, key)
+    return _clientcreate_client(url, key, options=options)
     return _client
 
 
