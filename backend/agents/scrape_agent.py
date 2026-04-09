@@ -428,7 +428,7 @@ def run_scrape_cycle():
 
         print(f"\nScraping {category} | {platform} | {handle}")
 
-    if platform == "tiktok":
+        if platform == "tiktok":
             posts = scrape_tiktok_account_snscrape(handle)
             if not posts:
                 posts = []
@@ -448,7 +448,7 @@ def run_scrape_cycle():
             if ingested >= target:
                 break
 
-        time.sleep(1.5)  # polite delay between accounts
+        time.sleep(1.5)
 
     print(f"\nAccount seed pass complete. Ingested: {ingested}")
 
