@@ -38,8 +38,8 @@ def scrape_tiktok_account_snscrape(handle: str) -> list:
     """Primary: lightweight snscrape for TikTok public posts."""
     try:
         result = subprocess.run(
-            ["snscrape", "--jsonl", "--max-results", "15", f"tiktok-user:{handle.lstrip('@')}"],
-            capture_output=True, text=True, timeout=45
+           ["snscrape", "--jsonl", "--max-results", "15", f"tiktok-user:{handle.lstrip('@')}"],
+capture_output=True, text=True, timeout=30
         )
         posts = []
         for line in result.stdout.strip().split("\n"):
@@ -429,9 +429,9 @@ def run_scrape_cycle():
         print(f"\nScraping {category} | {platform} | {handle}")
 
         if platform == "tiktok":
-            posts = scrape_tiktok_account_snscrape(handle)
-            if not posts:
-                posts = scrape_account_playwright(handle, "tiktok")
+    posts = scrape_tiktok_account_snscrape(handle)
+    if not posts:
+        print(f"  snscrape returned no posts for {handle} - skipping playwright on tiktok")
         elif platform == "instagram":
             posts = scrape_instagram_account(handle)
             if not posts:
