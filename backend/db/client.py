@@ -17,7 +17,6 @@ def get_db() -> Client:
         url = os.environ["SUPABASE_URL"]
         key = os.environ["SUPABASE_SERVICE_KEY"]
         _client = create_client(url, key)
-    return _clientcreate_client(url, key, options=options)
     return _client
 
 
