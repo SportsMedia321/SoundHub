@@ -430,7 +430,7 @@ def run_scrape_cycle():
 
         if platform == "tiktok":
     posts = scrape_tiktok_account_snscrape(handle)
-    if not posts:
+    if not posts:                 posts = []
             print(f"  snscrape returned no posts for {handle} - skipping playwright on tiktok")
             pass
         elif platform == "instagram":
