@@ -64,27 +64,47 @@ def calculate_viral_score(
 
 def passes_threshold(post: dict, category: str, platform: str, thresholds: dict) -> bool:
     """
-    Returns True if a post clears all threshold gates for its tier.
+    Primary filter: viral score with TikTok boost.
+    Falls back to raw threshold checks if viral score is zero.
     """
-    tier_cfg, _ = get_tier_config(category, thresholds)
-    tt_mult = thresholds["global"]["tiktok_velocity_multiplier"] if platform == "tiktok" else 1.0
-
-    views = post.get("views_at_ingest", 0)
-    eng_rate = post.get("engagement_rate", 0.0)
-    shares_4hr = post.get("share_velocity_4hr", 0)
+    viral_score = post.get("viral_score", 0)
     post_age_hr = post.get("post_event_hours", 999)
+    views = post.get("views_at_ingest", 0)
 
-    # Apply TikTok velocity multiplier — lower effective threshold for TT posts
+    tier_cfg, tier_name = get_tier_config(category, thresholds)
+
+    # Always reject posts older than recency gate
+    if post_age_hr > tier_cfg["recency_gate_hours"]:
+        return False
+
+    # Always reject posts with fewer than 1000 views
+    if views < 1000:
+        return False
+
+    # Primary filter — viral score with TikTok boost
+    if viral_score > 0:
+        min_score = {
+            "tier_1": 19.5,
+            "tier_2": 24.5,
+            "misc":   27.0,
+        }
+        cutoff = min_score.get(tier_name, 19.5)
+        tiktok_score_boost = 1.35 if platform == "tiktok" else 1.0
+        adjusted_score = viral_score * tiktok_score_boost
+        return adjusted_score >= cutoff
+
+    # Fallback to raw thresholds if viral score could not be calculated
+    tt_mult = thresholds["global"]["tiktok_velocity_multiplier"] if platform == "tiktok" else 1.0
     effective_views_threshold = tier_cfg["min_views_in_6hr"] / tt_mult
     effective_shares_threshold = tier_cfg["min_shares_in_4hr"] / tt_mult
+    eng_rate = post.get("engagement_rate", 0.0)
+    shares_4hr = post.get("share_velocity_4hr", 0)
 
     if views < effective_views_threshold:
         return False
-    if eng_rate < tier_cfg["min_engagement_rate"]:
+    if eng_rate < tier_cfg["min_engagement_rate"] and eng_rate > 0:
         return False
-    if shares_4hr < effective_shares_threshold:
-        return False
-    if post_age_hr > tier_cfg["recency_gate_hours"]:
+    if shares_4hr < effective_shares_threshold and shares_4hr > 0:
         return False
 
     return True
