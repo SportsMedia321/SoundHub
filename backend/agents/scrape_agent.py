@@ -258,55 +258,47 @@ def scrape_youtube_account(handle: str) -> list:
 # ── MISC hashtag scan ──────────────────────────────────────────────────────
 
 def scan_misc_hashtags() -> list:
-    """
-    Secondary discovery for MISC category.
-    Scans TikTok and IG hashtag pages via Playwright.
-    Only runs after account seed pass is complete.
-    """
+    """Use yt-dlp to search TikTok hashtags for MISC viral content."""
     hashtags = THRESHOLDS["misc"]["hashtags_monitored"]
     found = []
-
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
-        ctx = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        )
-        for tag in hashtags[:5]:  # limit to 5 hashtags per cycle
-            try:
-                page = ctx.new_page()
-                page.goto(f"https://www.tiktok.com/tag/{tag.lstrip('#')}", timeout=20000)
-                page.wait_for_timeout(2500)
-                items = page.query_selector_all('[data-e2e="challenge-item"]')
-                for item in items[:10]:
-                    try:
-                        link = item.query_selector("a")
-                        href = link.get_attribute("href") if link else ""
-                        views_el = item.query_selector('[data-e2e="video-views"]')
-                        views = parse_count(views_el.inner_text() if views_el else "0")
-                        if views > 0:
-                            found.append({
-                                "url": href,
-                                "views_at_ingest": views,
-                                "likes_at_ingest": 0,
-                                "comments_at_ingest": 0,
-                                "shares_at_ingest": 0,
-                                "saves_at_ingest": 0,
-                                "caption": tag,
-                                "duration_seconds": 0,
-                                "posted_at": "",
-                                "platform": "tiktok",
-                                "source_account": "hashtag_scan",
-                                "discovery_method": "hashtag_confirmation",
-                                "hashtags": [tag],
-                            })
-                    except Exception:
-                        continue
-                page.close()
-            except Exception as e:
-                print(f"Hashtag scan failed for {tag}: {e}")
-                continue
-        browser.close()
-
+    for tag in hashtags[:5]:
+        try:
+            search_url = f"ytsearch10:{tag.lstrip('#')} sports viral"
+            result = subprocess.run(
+                [
+                    "yt-dlp",
+                    "--flat-playlist",
+                    "--print-json",
+                    "--no-warnings",
+                    "--socket-timeout", "15",
+                    search_url,
+                ],
+                capture_output=True, text=True, timeout=30
+            )
+            for line in result.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                try:
+                    p = json.loads(line)
+                    found.append({
+                        "url": f"https://youtube.com/watch?v={p.get('id', '')}",
+                        "views_at_ingest": p.get("view_count") or 0,
+                        "likes_at_ingest": p.get("like_count") or 0,
+                        "comments_at_ingest": p.get("comment_count") or 0,
+                        "shares_at_ingest": 0,
+                        "saves_at_ingest": 0,
+                        "caption": p.get("title", "")[:500],
+                        "duration_seconds": int(p.get("duration") or 0),
+                        "posted_at": str(p.get("upload_date", "")),
+                        "platform": "youtube",
+                        "source_account": "hashtag_scan",
+                        "discovery_method": "hashtag_confirmation",
+                        "hashtags": [tag],
+                    })
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"Hashtag search failed for {tag}: {e}")
     return found
 
 
