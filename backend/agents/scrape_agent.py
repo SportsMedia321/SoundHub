@@ -378,84 +378,52 @@ def classify_category(account_category: str, caption: str, hashtags: list) -> st
 
 # ── Main cycle ─────────────────────────────────────────────────────────────
 
-def process_post(post: dict, category: str, account_type: str, discovery_method: str) -> bool:
-    """Evaluate a post, download if qualifying, write to DB. Returns True if ingested."""
-    url = post.get("url", "")
-    if not url or url_seen(url):
-        return False
-
-    platform = post.get("platform", "")
+def passes_threshold(post: dict, category: str, platform: str, thresholds: dict) -> bool:
+    """
+    Primary filter: viral score with TikTok boost.
+    Falls back to raw threshold checks if viral score is zero.
+    """
+    viral_score = post.get("viral_score", 0)
+    post_age_hr = post.get("post_event_hours", 999)
     views = post.get("views_at_ingest", 0)
-    likes = post.get("likes_at_ingest", 0)
-    comments = post.get("comments_at_ingest", 0)
-    shares = post.get("shares_at_ingest", 0)
-    saves = post.get("saves_at_ingest", 0)
-    age_hr = estimate_post_age_hours(post.get("posted_at", ""))
 
-    eng_rate = calculate_engagement_rate(views, likes, comments, shares, saves)
-    share_vel = int(shares * min(1.0, 4.0 / max(age_hr, 0.1)))
+    tier_cfg, tier_name = get_tier_config(category, thresholds)
 
-    post_data = {
-        **post,
-        "engagement_rate": eng_rate,
-        "share_velocity_4hr": share_vel,
-        "post_event_hours": int(age_hr),
-    }
-
-    _, tier_name = get_tier_config(category, THRESHOLDS)
-    if not passes_threshold(post_data, category, platform, THRESHOLDS):
+    # Always reject posts older than recency gate
+    if post_age_hr > tier_cfg["recency_gate_hours"]:
         return False
 
-    viral_score = calculate_viral_score(
-        views, int(views / max(age_hr, 1)),
-        share_vel, eng_rate, age_hr, platform, THRESHOLDS
-    )
-
-    clip_id = generate_id("clip")
-    now = datetime.now(timezone.utc)
-    expires = now + timedelta(hours=48)
-
-    # Download clip
-    local_path = download_clip(url, clip_id)
-    if not local_path:
+    # Always reject posts with fewer than 1000 views
+    if views < 1000:
         return False
 
-    r2_key = upload_raw_clip(local_path, clip_id)
-    os.remove(local_path)
+    # Primary filter — viral score with TikTok boost
+    if viral_score > 0:
+        min_score = {
+            "tier_1": 19.5,
+            "tier_2": 24.5,
+            "misc":   27.0,
+        }
+        cutoff = min_score.get(tier_name, 19.5)
+        tiktok_score_boost = 1.35 if platform == "tiktok" else 1.0
+        adjusted_score = viral_score * tiktok_score_boost
+        return adjusted_score >= cutoff
 
-    clip_record = {
-        "id": clip_id,
-        "source_platform": platform,
-        "source_account": post.get("source_account", ""),
-        "source_account_type": account_type,
-        "discovery_method": discovery_method,
-        "sport_category": category,
-        "tier": get_tier_number(tier_name),
-        "original_post_url": url,
-        "video_r2_key": r2_key,
-        "caption": post.get("caption", "")[:500],
-        "hashtags": json.dumps(post.get("hashtags", [])),
-        "duration_seconds": post.get("duration_seconds", 0),
-        "views_at_ingest": views,
-        "views_velocity_per_hr": int(views / max(age_hr, 1)),
-        "likes_at_ingest": likes,
-        "comments_at_ingest": comments,
-        "shares_at_ingest": shares,
-        "saves_at_ingest": saves,
-        "engagement_rate": eng_rate,
-        "share_velocity_4hr": share_vel,
-        "threshold_cleared": True,
-        "viral_score": viral_score,
-        "post_event_hours": int(age_hr),
-        "status": "queued",
-        "ingested_at": now.isoformat(),
-        "expires_at": expires.isoformat(),
-    }
+    # Fallback to raw thresholds if viral score could not be calculated
+    tt_mult = thresholds["global"]["tiktok_velocity_multiplier"] if platform == "tiktok" else 1.0
+    effective_views_threshold = tier_cfg["min_views_in_6hr"] / tt_mult
+    effective_shares_threshold = tier_cfg["min_shares_in_4hr"] / tt_mult
+    eng_rate = post.get("engagement_rate", 0.0)
+    shares_4hr = post.get("share_velocity_4hr", 0)
 
-    insert_clip(clip_record)
-    print(f"  ✓ Ingested: {category} | {platform} | {url[:60]} | score={viral_score}")
+    if views < effective_views_threshold:
+        return False
+    if eng_rate < tier_cfg["min_engagement_rate"] and eng_rate > 0:
+        return False
+    if shares_4hr < effective_shares_threshold and shares_4hr > 0:
+        return False
+
     return True
-
 
 def run_scrape_cycle():
     print(f"\n{'='*60}")
