@@ -7,13 +7,12 @@
     "recency_gate_hours": 48,
     "ttl_hours": 48,
     "tiktok_velocity_multiplier": 1.5
-}
   },
-  "tier_2": {
-    "categories": ["MLB", "NHL", "MLS", "US Intl"],
-    "min_views_in_6hr": 750000,
-    "min_engagement_rate": 0.07,
-    "min_shares_in_4hr": 15000,
+  "tier_1": {
+    "categories": ["NFL", "NBA"],
+    "min_views_in_6hr": 100,
+    "min_engagement_rate": 0.0,
+    "min_shares_in_4hr": 0,
     "recency_gate_hours": 48,
     "ttl_hours": 48,
     "tiktok_velocity_multiplier": 1.5
