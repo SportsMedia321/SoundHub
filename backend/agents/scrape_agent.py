@@ -166,43 +166,93 @@ def scrape_instagram_account(handle: str) -> list:
 
 
 def scrape_youtube_account(handle: str) -> list:
-    """YouTube Shorts scrape via yt-dlp metadata only (no download)."""
+    """Scrape YouTube Shorts via yt-dlp using both account and search."""
+    posts = []
+
+    # Try account page first
     try:
         channel_url = f"https://www.youtube.com/@{handle.lstrip('@')}/shorts"
         result = subprocess.run(
             [
-                "yt-dlp", "--flat-playlist", "--print-json",
-                "--playlist-end", "15",
-                "--match-filter", "duration < 61",
-                channel_url
+                "yt-dlp",
+                "--flat-playlist",
+                "--print-json",
+                "--playlist-end", "10",
+                "--no-warnings",
+                "--socket-timeout", "15",
+                channel_url,
             ],
-            capture_output=True, text=True, timeout=60
+            capture_output=True, text=True, timeout=30
         )
-        posts = []
         for line in result.stdout.strip().split("\n"):
             if not line:
                 continue
             try:
                 p = json.loads(line)
+                duration = p.get("duration") or 0
+                if duration > 61:
+                    continue
                 posts.append({
                     "url": f"https://youtube.com/shorts/{p.get('id', '')}",
-                    "views_at_ingest": p.get("view_count", 0),
-                    "likes_at_ingest": p.get("like_count", 0),
-                    "comments_at_ingest": p.get("comment_count", 0),
+                    "views_at_ingest": p.get("view_count") or 0,
+                    "likes_at_ingest": p.get("like_count") or 0,
+                    "comments_at_ingest": p.get("comment_count") or 0,
                     "shares_at_ingest": 0,
                     "saves_at_ingest": 0,
-                    "caption": p.get("title", ""),
-                    "duration_seconds": int(p.get("duration", 0)),
-                    "posted_at": p.get("upload_date", ""),
+                    "caption": p.get("title", "")[:500],
+                    "duration_seconds": int(duration),
+                    "posted_at": str(p.get("upload_date", "")),
                     "platform": "youtube",
                     "source_account": handle,
                 })
             except Exception:
                 continue
-        return posts
     except Exception as e:
-        print(f"YT scrape failed for {handle}: {e}")
-        return []
+        print(f"YT account scrape failed for {handle}: {e}")
+
+    # If account scrape returned nothing use search fallback
+    if not posts:
+        try:
+            category = handle.lstrip('@').replace('highlights', '').strip()
+            search_url = f"ytsearch10:{category} sports highlights shorts"
+            result = subprocess.run(
+                [
+                    "yt-dlp",
+                    "--flat-playlist",
+                    "--print-json",
+                    "--no-warnings",
+                    "--socket-timeout", "15",
+                    search_url,
+                ],
+                capture_output=True, text=True, timeout=30
+            )
+            for line in result.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                try:
+                    p = json.loads(line)
+                    duration = p.get("duration") or 0
+                    if duration > 61:
+                        continue
+                    posts.append({
+                        "url": f"https://youtube.com/shorts/{p.get('id', '')}",
+                        "views_at_ingest": p.get("view_count") or 0,
+                        "likes_at_ingest": p.get("like_count") or 0,
+                        "comments_at_ingest": p.get("comment_count") or 0,
+                        "shares_at_ingest": 0,
+                        "saves_at_ingest": 0,
+                        "caption": p.get("title", "")[:500],
+                        "duration_seconds": int(duration),
+                        "posted_at": str(p.get("upload_date", "")),
+                        "platform": "youtube",
+                        "source_account": handle,
+                    })
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"YT search fallback failed for {handle}: {e}")
+
+    return posts
 
 
 # ── MISC hashtag scan ──────────────────────────────────────────────────────
