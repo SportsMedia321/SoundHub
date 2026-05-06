@@ -130,10 +130,19 @@ def scrape_account_playwright(handle: str, platform: str) -> list:
 
 
 def scrape_instagram_account(handle: str) -> list:
-    """Instagram Reels scrape via snscrape."""
+    """Instagram Reels scrape via yt-dlp."""
     try:
+        url = f"https://www.instagram.com/{handle.lstrip('@')}/reels/"
         result = subprocess.run(
-            ["snscrape", "--jsonl", "--max-results", "15", f"instagram-user:{handle.lstrip('@')}"],
+            [
+                "yt-dlp",
+                "--flat-playlist",
+                "--print-json",
+                "--playlist-end", "15",
+                "--no-warnings",
+                "--socket-timeout", "15",
+                url,
+            ],
             capture_output=True, text=True, timeout=45
         )
         posts = []
@@ -142,18 +151,16 @@ def scrape_instagram_account(handle: str) -> list:
                 continue
             try:
                 p = json.loads(line)
-                if p.get("typename") not in ("GraphVideo", "Reel"):
-                    continue
                 posts.append({
-                    "url": p.get("url", ""),
-                    "views_at_ingest": p.get("videoViewCount", 0),
-                    "likes_at_ingest": p.get("likeCount", 0),
-                    "comments_at_ingest": p.get("commentCount", 0),
+                    "url": p.get("webpage_url", ""),
+                    "views_at_ingest": p.get("view_count") or 0,
+                    "likes_at_ingest": p.get("like_count") or 0,
+                    "comments_at_ingest": p.get("comment_count") or 0,
                     "shares_at_ingest": 0,
                     "saves_at_ingest": 0,
-                    "caption": (p.get("caption") or {}).get("text", ""),
-                    "duration_seconds": int(p.get("videoDuration", 0)),
-                    "posted_at": str(p.get("timestamp", "")),
+                    "caption": p.get("title", "")[:500],
+                    "duration_seconds": int(p.get("duration") or 0),
+                    "posted_at": str(p.get("upload_date", "")),
                     "platform": "instagram",
                     "source_account": handle,
                 })
@@ -161,9 +168,8 @@ def scrape_instagram_account(handle: str) -> list:
                 continue
         return posts
     except Exception as e:
-        print(f"IG snscrape failed for {handle}: {e}")
+        print(f"IG scrape failed for {handle}: {e}")
         return []
-
 
 def scrape_youtube_account(handle: str) -> list:
     """Scrape YouTube Shorts via yt-dlp using both account and search."""
