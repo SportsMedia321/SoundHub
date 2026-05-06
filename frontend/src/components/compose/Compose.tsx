@@ -81,7 +81,7 @@ export default function Compose({
 
   return (
     <div className="flex flex-1 overflow-hidden min-h-0">
-      <div className="flex-1 overflow-y-auto p-[14px] flex flex-col gap-[12px] min-h-0 max-w-[520px]">
+      <div className="flex-1 overflow-y-auto p-[14px] flex flex-col gap-[12px] min-h-0">
 
         {/* Clip selector (if multiple) */}
         {(initialClips ?? []).length > 1 && (
@@ -121,25 +121,43 @@ export default function Compose({
             </span>
           </div>
 
-          {/* Thumb */}
+          {/* Thumb / Video Preview */}
           <div
             className="w-full flex items-center justify-center relative overflow-hidden"
-            style={{ maxHeight: 200, aspectRatio: "9/16", background: "var(--s3)" }}
+            style={{ maxHeight: 320, aspectRatio: "9/16", background: "var(--s3)" }}
           >
-            <div className="flex items-end gap-[2px] h-8 z-10 relative px-2">
-              {WF.map((h, i) => (
-                <div key={i} className="w-[2px] rounded-sm" style={{ height: h, background: "rgba(255,255,255,0.4)" }} />
-              ))}
-            </div>
+            {activeClip.preview_url ? (
+              <video
+                src={activeClip.preview_url}
+                className="absolute inset-0 w-full h-full object-cover"
+                controls
+                playsInline
+                style={{ zIndex: 10 }}
+              />
+            ) : (
+              <>
+                <div className="flex items-end gap-[2px] h-8 z-10 relative px-2">
+                  {WF.map((h, i) => (
+                    <div key={i} className="w-[2px] rounded-sm" style={{ height: h, background: "rgba(255,255,255,0.4)" }} />
+                  ))}
+                </div>
+                <div
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center z-20"
+                  style={{ background: "rgba(0,0,0,0.55)" }}
+                >
+                  <div className="ml-[2px]" style={{ width: 0, height: 0, borderTop: "5px solid transparent", borderBottom: "5px solid transparent", borderLeft: "9px solid #fff" }} />
+                </div>
+                <div
+                  className="absolute bottom-[8px] left-[8px] text-[8px] font-mono"
+                  style={{ color: "rgba(255,255,255,0.4)" }}
+                >
+                  No preview — video stored in R2
+                </div>
+              </>
+            )}
             <div
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 rounded-full flex items-center justify-center z-20"
-              style={{ background: "rgba(0,0,0,0.55)" }}
-            >
-              <div className="ml-[2px]" style={{ width: 0, height: 0, borderTop: "5px solid transparent", borderBottom: "5px solid transparent", borderLeft: "9px solid #fff" }} />
-            </div>
-            <div
-              className="absolute bottom-[8px] left-[8px] text-[8px] font-mono"
-              style={{ color: "rgba(255,255,255,0.4)" }}
+              className="absolute bottom-[8px] right-[8px] text-[8px] font-mono"
+              style={{ color: "rgba(255,255,255,0.4)", zIndex: 20 }}
             >
               Orig. audio: {stripOrig ? "stripped" : "active"}
             </div>
@@ -249,8 +267,9 @@ export default function Compose({
 
       {/* Audio sidebar */}
       <div
-        className="w-[260px] flex-shrink-0 border-l flex flex-col gap-[10px] p-[12px] overflow-y-auto"
+        className="w-[220px] flex-shrink-0 border-l flex flex-col gap-[10px] p-[12px] overflow-y-auto"
         style={{ background: "var(--s1)", borderColor: "var(--bo)" }}
+      >
       >
         <div className="text-[11px] font-medium" style={{ color: "var(--t)" }}>Audio library</div>
         <div className="text-[9px] font-mono" style={{ color: "var(--t2)" }}>Tap to select · active track highlighted</div>
