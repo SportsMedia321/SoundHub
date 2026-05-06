@@ -470,10 +470,18 @@ def process_post(post: dict, category: str, account_type: str, discovery_method:
 def run_scrape_cycle():
     print(f"\n{'='*60}")
     print(f"Scrape cycle started: {datetime.now(timezone.utc).isoformat()}")
-    set_state("scrape_last_run", datetime.now(timezone.utc).isoformat())
-    set_state("scrape_next_run", "running")
+    
+    try:
+        set_state("scrape_last_run", datetime.now(timezone.utc).isoformat())
+        set_state("scrape_next_run", "running")
+    except Exception as e:
+        print(f"WARNING: Could not update agent state: {e}")
 
-    seeds = load_seeds(tiktok_first=True)
+    try:
+        seeds = load_seeds(tiktok_first=True)
+    except Exception as e:
+        print(f"FATAL: Could not load seeds from database: {e}")
+        return
     ingested = 0
     target = THRESHOLDS["global"]["target_clips_per_24hr"]
 
@@ -522,11 +530,14 @@ def run_scrape_cycle():
     print(f"\nExpired {expired} clips past 48hr TTL.")
 
     next_run = (datetime.now(timezone.utc) + timedelta(hours=12)).isoformat()
-    set_state("scrape_next_run", next_run)
-    set_state("total_clips_24hr", ingested)
+    try:
+        set_state("scrape_next_run", next_run)
+        set_state("total_clips_24hr", ingested)
+        add_training_note("scrape_agent", "cycle_complete", f"Ingested {ingested} clips this cycle.")
+    except Exception as e:
+        print(f"WARNING: Could not update final state: {e}")
 
     print(f"\nScrape cycle complete. Total ingested: {ingested}. Next: {next_run}")
-    add_training_note("scrape_agent", "cycle_complete", f"Ingested {ingested} clips this cycle.")
 
 
 if __name__ == "__main__":
