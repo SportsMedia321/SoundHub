@@ -340,22 +340,28 @@ def parse_count(text: str) -> int:
 
 
 def estimate_post_age_hours(posted_at: str) -> float:
-    if not posted_at:
-        return 24.0
+    """
+    Estimate hours since post from timestamp string.
+    Returns 999 (rejected) if date is missing or unparseable
+    so posts with unknown age never pass the recency gate.
+    """
+    if not posted_at or posted_at in ("", "None", "null"):
+        return 999.0
     try:
         formats = ["%Y%m%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"]
         dt = None
         for fmt in formats:
             try:
-                dt = datetime.strptime(posted_at[:len(fmt)], fmt).replace(tzinfo=timezone.utc)
+                dt = datetime.strptime(str(posted_at)[:len(fmt)], fmt).replace(tzinfo=timezone.utc)
                 break
             except Exception:
                 continue
         if not dt:
-            return 24.0
-        return (datetime.now(timezone.utc) - dt).total_seconds() / 3600
+            return 999.0
+        age = (datetime.now(timezone.utc) - dt).total_seconds() / 3600
+        return age
     except Exception:
-        return 24.0
+        return 999.0
 
 
 def url_seen(url: str) -> bool:
