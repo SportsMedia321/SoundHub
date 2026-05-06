@@ -270,7 +270,6 @@ export default function Compose({
         className="w-[220px] flex-shrink-0 border-l flex flex-col gap-[10px] p-[12px] overflow-y-auto"
         style={{ background: "var(--s1)", borderColor: "var(--bo)" }}
       >
-      >
         <div className="text-[11px] font-medium" style={{ color: "var(--t)" }}>Audio library</div>
         <div className="text-[9px] font-mono" style={{ color: "var(--t2)" }}>Tap to select · active track highlighted</div>
 
