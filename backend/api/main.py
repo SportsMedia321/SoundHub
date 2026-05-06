@@ -266,14 +266,27 @@ def add_note(agent: str, action: str, note: str):
 # ── Manual refresh trigger ─────────────────────────────────────────────────
 
 @app.post("/scrape/trigger")
-async def trigger_scrape(background_tasks: BackgroundTasks):
-    """Manual scrape trigger from UI — guard against double trigger."""
-    current = get_state("scrape_next_run")
-    if current == "running":
-        return {"status": "already running"}
-    from agents.scrape_agent import run_scrape_cycle
-    set_state("scrape_next_run", "running")
-    background_tasks.add_task(run_scrape_cycle)
+async def trigger_scrape():
+    """Manual scrape trigger — runs in separate thread."""
+    import threading
+    try:
+        current = get_state("scrape_next_run")
+        if current == "running":
+            return {"status": "already running"}
+    except Exception:
+        pass
+    
+    def run():
+        try:
+            from agents.scrape_agent import run_scrape_cycle
+            run_scrape_cycle()
+        except Exception as e:
+            print(f"SCRAPE ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    thread = threading.Thread(target=run, daemon=True)
+    thread.start()
     return {"status": "scrape triggered"}
 
 
