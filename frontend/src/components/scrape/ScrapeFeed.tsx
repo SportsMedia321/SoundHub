@@ -215,7 +215,10 @@ export default function ScrapeFeed({
     }
   };
 
-  const selectedClips = clips.filter((c) => selected.has(c.id));
+  const selectedClips = React.useMemo(
+    () => sorted.filter((c) => selected.has(c.id)),
+    [sorted, selected]
+  );
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-h-0">
