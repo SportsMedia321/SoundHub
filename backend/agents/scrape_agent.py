@@ -47,7 +47,7 @@ def scrape_tiktok_account_snscrape(handle: str) -> list:
                 "--no-warnings",
                 url,
             ],
-            capture_output=True, text=True, timeout=60
+            capture_output=True, text=True, timeout=30
         )
         posts = []
         for line in result.stdout.strip().split("\n"):
@@ -465,9 +465,13 @@ def run_scrape_cycle():
         else:
             continue
 
+        account_ingested = 0
         for post in posts:
+            if account_ingested >= 3:
+                break
             if process_post(post, category, account_type, "account_seed"):
                 ingested += 1
+                account_ingested += 1
                 seed["clips_contributed_this_cycle"] = seed.get("clips_contributed_this_cycle", 0) + 1
             if ingested >= target:
                 break
