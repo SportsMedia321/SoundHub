@@ -19,7 +19,13 @@ export default function Compose({
   initialClips?: Clip[];
   onQueued: () => void;
 }) {
-  const [activeClip, setActiveClip] = useState<Clip | null>(initialClips?.[0] ?? null);
+  const [activeClip, setActiveClip] = useState<Clip | null>(null);
+
+  useEffect(() => {
+    if (initialClips && initialClips.length > 0) {
+      setActiveClip(initialClips[0]);
+    }
+  }, [initialClips]);
   const [activeAudio, setActiveAudio] = useState<AudioTrack | null>(null);
   const [newVol, setNewVol] = useState(100);
   const [origVol, setOrigVol] = useState(0);
