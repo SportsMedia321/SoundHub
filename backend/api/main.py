@@ -267,10 +267,13 @@ def add_note(agent: str, action: str, note: str):
 
 @app.post("/scrape/trigger")
 async def trigger_scrape(background_tasks: BackgroundTasks):
-    """Manual scrape trigger from UI."""
+    """Manual scrape trigger from UI — guard against double trigger."""
+    current = get_state("scrape_next_run")
+    if current == "running":
+        return {"status": "already running"}
     from agents.scrape_agent import run_scrape_cycle
-    background_tasks.add_task(run_scrape_cycle)
     set_state("scrape_next_run", "running")
+    background_tasks.add_task(run_scrape_cycle)
     return {"status": "scrape triggered"}
 
 
