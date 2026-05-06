@@ -277,8 +277,11 @@ async def trigger_scrape():
         pass
     
     def run():
+        print("SCRAPE THREAD STARTED")
         try:
+            print("Importing scrape agent...")
             from agents.scrape_agent import run_scrape_cycle
+            print("Import successful, starting cycle...")
             run_scrape_cycle()
         except Exception as e:
             print(f"SCRAPE ERROR: {e}")
