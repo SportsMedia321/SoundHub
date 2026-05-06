@@ -47,7 +47,7 @@ def scrape_tiktok_account(handle: str) -> list:
                 "--socket-timeout", "10",
                 url,
             ],
-            capture_output=True, text=True, timeout=45
+            capture_output=True, text=True, timeout=60
         )
         posts = []
         for line in result.stdout.strip().split("\n"):
@@ -417,6 +417,7 @@ def process_post(post: dict, category: str, account_type: str, discovery_method:
 
     _, tier_name = get_tier_config(category, THRESHOLDS)
     if not passes_threshold(post_data, category, platform, THRESHOLDS):
+        print(f"    ✗ Rejected: score={viral_score:.1f} views={views:,} platform={platform} category={category}")
         return False
 
     clip_id = generate_id("clip")
