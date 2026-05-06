@@ -372,12 +372,23 @@ def url_seen(url: str) -> bool:
     return False
 
 
+def already_in_db(url: str) -> bool:
+    """Check Supabase whether this URL was already ingested previously."""
+    try:
+        from db.client import get_db
+        db = get_db()
+        result = db.table("clips").select("id").eq("original_post_url", url).limit(1).execute()
+        return len(result.data or []) > 0
+    except Exception:
+        return False
+
+
 # ── Process post ───────────────────────────────────────────────────────────
 
 def process_post(post: dict, category: str, account_type: str, discovery_method: str) -> bool:
     """Evaluate a post, download if qualifying, write to DB. Returns True if ingested."""
     url = post.get("url", "")
-    if not url or url_seen(url):
+    if not url or url_seen(url) or already_in_db(url):
         return False
 
     platform = post.get("platform", "")
