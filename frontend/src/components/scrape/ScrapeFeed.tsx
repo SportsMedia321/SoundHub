@@ -41,7 +41,7 @@ function ClipCard({
       {/* Thumbnail / Video Preview */}
       <div
         className="w-full relative overflow-hidden flex items-center justify-center"
-        style={{ aspectRatio: "9/15", background: "var(--s3)" }}
+        style={{ aspectRatio: "9/12", background: "var(--s3)" }}
       >
         {clip.preview_url ? (
           <video
@@ -125,9 +125,9 @@ function ClipCard({
       </div>
 
       {/* Body */}
-      <div className="p-[8px_10px]">
-        <div
-          className="text-[10px] font-medium truncate mb-[2px]"
+      <div className="p-[6px_8px]">
+          <div
+            className="text-[9px] font-medium truncate mb-[1px]"
           style={{ color: "var(--t)" }}
         >
           {clip.caption?.slice(0, 60) || "Untitled clip"}
@@ -322,7 +322,7 @@ export default function ScrapeFeed({
         ) : sorted.length === 0 ? (
           <Empty label="No clips found — trigger a scrape to populate the feed" />
         ) : (
-          <div className="grid grid-cols-3 gap-[9px]">
+          <div className="grid grid-cols-4 gap-[7px]">
             {sorted.map((clip) => (
               <ClipCard
                 key={clip.id}
