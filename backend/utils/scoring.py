@@ -85,12 +85,13 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
     if viral_score > 0:
         min_score = {
             "tier_1": 19.5,
-            "tier_2": 24.5,
-            "misc":   27.0,
+            "tier_2": 22.0,
+            "misc":   24.0,
         }
         cutoff = min_score.get(tier_name, 19.5)
         tiktok_score_boost = 1.35 if platform == "tiktok" else 1.0
-        adjusted_score = viral_score * tiktok_score_boost
+        instagram_score_boost = 1.15 if platform == "instagram" else 1.0
+        adjusted_score = viral_score * tiktok_score_boost * instagram_score_boost
         return adjusted_score >= cutoff
 
     tt_mult = thresholds["global"]["tiktok_velocity_multiplier"] if platform == "tiktok" else 1.0
