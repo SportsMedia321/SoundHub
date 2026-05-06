@@ -64,7 +64,10 @@ def calculate_viral_score(
 
 def passes_threshold(post: dict, category: str, platform: str, thresholds: dict) -> bool:
     """
-    Primary filter: viral score with TikTok boost.
+    Primary filter: viral score with TikTok 1.35x boost.
+    Tier 1 (NFL/NBA): cutoff 19.5
+    Tier 2 (MLB/NHL/MLS/US Intl): cutoff 24.5
+    MISC: cutoff 27.0
     Falls back to raw threshold checks if viral score is zero.
     """
     viral_score = post.get("viral_score", 0)
@@ -73,15 +76,12 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
 
     tier_cfg, tier_name = get_tier_config(category, thresholds)
 
-    # Always reject posts older than recency gate
     if post_age_hr > tier_cfg["recency_gate_hours"]:
         return False
 
-    # Always reject posts with fewer than 1000 views
     if views < 1000:
         return False
 
-    # Primary filter — viral score with TikTok boost
     if viral_score > 0:
         min_score = {
             "tier_1": 19.5,
@@ -93,7 +93,6 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
         adjusted_score = viral_score * tiktok_score_boost
         return adjusted_score >= cutoff
 
-    # Fallback to raw thresholds if viral score could not be calculated
     tt_mult = thresholds["global"]["tiktok_velocity_multiplier"] if platform == "tiktok" else 1.0
     effective_views_threshold = tier_cfg["min_views_in_6hr"] / tt_mult
     effective_shares_threshold = tier_cfg["min_shares_in_4hr"] / tt_mult
@@ -108,7 +107,6 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
         return False
 
     return True
-
 
 def get_tier_number(tier_name: str) -> int:
     return {"tier_1": 1, "tier_2": 2, "misc": 3}.get(tier_name, 3)
