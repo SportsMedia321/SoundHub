@@ -81,8 +81,7 @@ export default function Compose({
 
   return (
     <div className="flex flex-1 overflow-hidden min-h-0">
-      {/* Main compose area */}
-      <div className="flex-1 overflow-y-auto p-[14px] flex flex-col gap-[12px] min-h-0">
+      <div className="flex-1 overflow-y-auto p-[14px] flex flex-col gap-[12px] min-h-0 max-w-[520px]">
 
         {/* Clip selector (if multiple) */}
         {(initialClips ?? []).length > 1 && (
