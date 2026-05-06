@@ -15,7 +15,7 @@
     "min_shares_in_4hr": 0,
     "recency_gate_hours": 48,
     "ttl_hours": 48,
-    "tiktok_velocity_multiplier": 1.5
+    "tiktok_velocity_multiplier": 1.2
   },
   "misc": {
     "categories": ["MISC"],
@@ -31,13 +31,13 @@
     "min_shares_in_4hr": 25000,
     "recency_gate_hours": 48,
     "ttl_hours": 48,
-    "tiktok_velocity_multiplier": 1.5
+    "tiktok_velocity_multiplier": 1.2
   },
   "global": {
     "scrape_priority": "account_seed_first",
     "tiktok_priority": true,
-    "tiktok_velocity_multiplier": 1.5,
-    "target_clips_per_24hr": 35,
+    "tiktok_velocity_multiplier": 1.2,
+    "target_clips_per_24hr": 60,
     "auto_refresh_interval_hr": 12,
     "account_seed_refresh_days": 14,
     "max_seeded_accounts_per_category": 20,
