@@ -8,7 +8,7 @@ import {
 import { Btn, StatCard, Pill, Empty, Spinner } from "../ui";
 
 const CATEGORIES = ["All", "NFL", "NBA", "MLB", "NHL", "MLS", "US Intl", "MISC"];
-const SORTS = ["Viral score", "Views", "Recency", "TTL remaining"];
+const SORTS = ["Viral score", "Views", "Recency uploaded", "Recency posted", "TTL remaining"];
 
 function wfHeights() {
   return [22, 35, 50, 38, 58, 28, 45, 33, 55, 40, 30, 48];
@@ -187,7 +187,9 @@ export default function ScrapeFeed({
     )
     .sort((a, b) => {
       if (sort === "Views") return b.views_at_ingest - a.views_at_ingest;
-      if (sort === "Recency") return a.post_event_hours - b.post_event_hours;
+      if (sort === "Recency posted") return a.post_event_hours - b.post_event_hours;
+      if (sort === "Recency uploaded")
+        return new Date(b.ingested_at).getTime() - new Date(a.ingested_at).getTime();
       if (sort === "TTL remaining")
         return new Date(b.expires_at).getTime() - new Date(a.expires_at).getTime();
       return b.viral_score - a.viral_score;
