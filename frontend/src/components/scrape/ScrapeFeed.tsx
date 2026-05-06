@@ -38,36 +38,53 @@ function ClipCard({
         transform: selected ? "translateY(-1px)" : undefined,
       }}
     >
-      {/* Thumbnail */}
+      {/* Thumbnail / Video Preview */}
       <div
         className="w-full relative overflow-hidden flex items-center justify-center"
         style={{ aspectRatio: "9/15", background: "var(--s3)" }}
       >
-        {/* waveform decoration */}
-        <div className="flex items-end gap-[2px] h-8 z-10 relative px-2">
-          {wfHeights().map((h, i) => (
-            <div
-              key={i}
-              className="w-[2px] rounded-sm"
-              style={{ height: h, background: "rgba(255,255,255,0.4)" }}
-            />
-          ))}
-        </div>
-        {/* play button */}
-        <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center z-20"
-          style={{ background: "rgba(0,0,0,0.55)" }}
-        >
-          <div
-            className="ml-[2px]"
-            style={{
-              width: 0, height: 0,
-              borderTop: "5px solid transparent",
-              borderBottom: "5px solid transparent",
-              borderLeft: "9px solid #fff",
+        {clip.preview_url ? (
+          <video
+            src={clip.preview_url}
+            className="absolute inset-0 w-full h-full object-cover"
+            muted
+            playsInline
+            loop
+            onMouseEnter={(e) => (e.target as HTMLVideoElement).play()}
+            onMouseLeave={(e) => {
+              const v = e.target as HTMLVideoElement;
+              v.pause();
+              v.currentTime = 0;
             }}
           />
-        </div>
+        ) : (
+          <div className="flex items-end gap-[2px] h-8 z-10 relative px-2">
+            {wfHeights().map((h, i) => (
+              <div
+                key={i}
+                className="w-[2px] rounded-sm"
+                style={{ height: h, background: "rgba(255,255,255,0.4)" }}
+              />
+            ))}
+          </div>
+        )}
+        {/* play button overlay — only show when no video */}
+        {!clip.preview_url && (
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-7 h-7 rounded-full flex items-center justify-center z-20"
+            style={{ background: "rgba(0,0,0,0.55)" }}
+          >
+            <div
+              className="ml-[2px]"
+              style={{
+                width: 0, height: 0,
+                borderTop: "5px solid transparent",
+                borderBottom: "5px solid transparent",
+                borderLeft: "9px solid #fff",
+              }}
+            />
+          </div>
+        )}
         {/* platform badge */}
         <div
           className="absolute top-[6px] left-[6px] text-[8px] font-mono font-medium px-[5px] py-[2px] rounded-[20px] z-30"
