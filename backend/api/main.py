@@ -22,8 +22,6 @@ from db.client import (
     set_state, get_training_notes, add_training_note, generate_id, now_iso
 )
 from utils.r2 import upload_audio, presigned_url, delete_file
-from agents.compose_agent import handle_compose_request
-from agents.syndication_agent import run_syndication
 
 
 app = FastAPI(title="soundhub API", version="1.0.0")
@@ -90,6 +88,7 @@ class ComposePayload(BaseModel):
 
 @app.post("/compose")
 async def compose(payload: ComposePayload, background_tasks: BackgroundTasks):
+    from agents.compose_agent import handle_compose_request
     from db.client import get_db
     db = get_db()
     clip_result = db.table("clips").select("*").eq("id", payload.clip_id).execute()
@@ -124,7 +123,7 @@ class ApprovePayload(BaseModel):
 
 @app.post("/queue/approve")
 async def approve_posts(payload: ApprovePayload, background_tasks: BackgroundTasks):
-    from agents.syndication_agent import calculate_optimal_time
+    from agents.syndication_agent import calculate_optimal_time, run_syndication
     approved = []
     for post_id in payload.post_ids:
         from db.client import get_db
