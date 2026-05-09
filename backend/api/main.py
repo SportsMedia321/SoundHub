@@ -266,8 +266,15 @@ def add_note(agent: str, action: str, note: str):
 
 @app.post("/scrape/trigger")
 async def trigger_scrape():
-    """Manual scrape trigger — runs in separate thread."""
-    import threading
+    """Trigger scrape via GitHub Actions workflow dispatch."""
+    import requests as http_requests
+    
+    github_token = os.environ.get("GITHUB_TOKEN")
+    github_repo = os.environ.get("GITHUB_REPO", "SportsMedia321/SoundHub")
+    
+    if not github_token:
+        return {"status": "error", "message": "GITHUB_TOKEN not configured"}
+    
     try:
         current = get_state("scrape_next_run")
         if current == "running":
@@ -275,21 +282,27 @@ async def trigger_scrape():
     except Exception:
         pass
     
-    def run():
-        print("SCRAPE THREAD STARTED")
-        try:
-            print("Importing scrape agent...")
-            from agents.scrape_agent import run_scrape_cycle
-            print("Import successful, starting cycle...")
-            run_scrape_cycle()
-        except Exception as e:
-            print(f"SCRAPE ERROR: {e}")
-            import traceback
-            traceback.print_exc()
-    
-    thread = threading.Thread(target=run, daemon=True)
-    thread.start()
-    return {"status": "scrape triggered"}
+    try:
+        resp = http_requests.post(
+            f"https://api.github.com/repos/{github_repo}/actions/workflows/scrape.yml/dispatches",
+            headers={
+                "Authorization": f"Bearer {github_token}",
+                "Accept": "application/vnd.github+json",
+                "X-GitHub-Api-Version": "2022-11-28",
+            },
+            json={"ref": "main"},
+            timeout=15,
+        )
+        if resp.status_code == 204:
+            set_state("scrape_next_run", "running")
+            print("Scrape triggered via GitHub Actions")
+            return {"status": "scrape triggered via GitHub Actions"}
+        else:
+            print(f"GitHub Actions trigger failed: {resp.status_code} {resp.text}")
+            return {"status": "error", "message": f"GitHub returned {resp.status_code}"}
+    except Exception as e:
+        print(f"Failed to trigger GitHub Actions: {e}")
+        return {"status": "error", "message": str(e)}
 
 
 # ── Seed refresh trigger ───────────────────────────────────────────────────
