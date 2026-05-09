@@ -2,8 +2,8 @@ name: Scrape Agent — every 12 hours
 
 on:
   schedule:
-    - cron: '0 */12 * * *'   # 12:00 AM and 12:00 PM UTC
-  workflow_dispatch:           # allow manual trigger from GitHub UI
+    - cron: '0 */12 * * *'
+  workflow_dispatch:
 
 jobs:
   scrape:
