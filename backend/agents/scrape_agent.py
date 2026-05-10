@@ -416,8 +416,10 @@ def process_post(post: dict, category: str, account_type: str, discovery_method:
     post_data["viral_score"] = viral_score
 
     _, tier_name = get_tier_config(category, THRESHOLDS)
+    tiktok_boost = 1.35 if platform == "tiktok" else 1.0
+    adjusted = viral_score * tiktok_boost
     if not passes_threshold(post_data, category, platform, THRESHOLDS):
-        print(f"    ✗ Rejected: score={viral_score:.1f} views={views:,} platform={platform} category={category}")
+        print(f"    ✗ Rejected: raw={viral_score:.1f} adjusted={adjusted:.1f} views={views:,} platform={platform} category={category}")
         return False
 
     clip_id = generate_id("clip")
