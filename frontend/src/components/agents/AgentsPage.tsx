@@ -220,7 +220,7 @@ function SeedList() {
 export default function AgentsPage() {
   const { data: stateData } = useSWR("agent-state", getAgentState, { refreshInterval: 30000 });
   const { data: notesData } = useSWR("training-notes", () => getTrainingNotes(), { refreshInterval: 60000 });
-  const notes = notesData?.notes ?? [];
+  const notes = Array.isArray(notesData?.notes) ? notesData.notes : [];
   const state = stateData;
 
   const notesByAgent = (agent: string) =>
