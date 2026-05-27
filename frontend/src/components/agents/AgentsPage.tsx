@@ -109,8 +109,12 @@ function AgentCard({
 
 function SeedList() {
   const [category, setCategory] = useState("NFL");
-  const { data, isLoading } = useSWR(["seeds", category], () => getSeeds(category));
-  const seeds = data?.seeds ?? [];
+  const { data, isLoading } = useSWR(
+    ["seeds", category],
+    () => getSeeds(category),
+    { onError: () => {} }
+  );
+  const seeds = Array.isArray(data?.seeds) ? data.seeds : [];
 
   return (
     <div
@@ -142,7 +146,6 @@ function SeedList() {
         </div>
       </div>
 
-      {/* Column headers */}
       <div
         className="flex items-center gap-[8px] px-[12px] py-[5px] border-b text-[8px] font-mono"
         style={{ background: "var(--s3)", borderColor: "var(--bo)", color: "var(--t3)" }}
@@ -152,7 +155,7 @@ function SeedList() {
         <span className="w-[56px]">Type</span>
         <span className="w-[36px] text-right">Eng</span>
         <span className="w-[36px] text-right">Trend</span>
-        <span className="w-[60px] text-center">Platforms</span>
+        <span className="w-[60px] text-center">Platform</span>
       </div>
 
       <div className="max-h-[280px] overflow-y-auto">
@@ -162,21 +165,36 @@ function SeedList() {
           <Empty label="No seeds loaded yet" />
         ) : (
           seeds.map((seed, i) => {
-            const trendColor = seed.trend_direction === "up" ? "var(--br)" : seed.trend_direction === "down" ? "#e74c3c" : "var(--t3)";
+            if (!seed || typeof seed !== "object") return null;
+            const trendColor =
+              seed.trend_direction === "up"
+                ? "var(--br)"
+                : seed.trend_direction === "down"
+                ? "#e74c3c"
+                : "var(--t3)";
             const typeColors: Record<string, string> = {
-              official: "var(--br)", highlight: "#1d9bf0", media: "#a78bfa", fan: "#fbbf24",
+              official: "var(--br)",
+              highlight: "#1d9bf0",
+              media: "#a78bfa",
+              fan: "#fbbf24",
             };
             return (
               <div
-                key={seed.id}
-                className="flex items-center gap-[8px] px-[12px] py-[6px] border-b last:border-0 hover:bg-[var(--s3)] transition-colors"
+                key={seed.id ?? i}
+                className="flex items-center gap-[8px] px-[12px] py-[6px] border-b last:border-0"
                 style={{ borderColor: "var(--bo)" }}
               >
-                <span className="text-[9px] font-mono w-5 flex-shrink-0" style={{ color: "var(--t3)" }}>
+                <span
+                  className="text-[9px] font-mono w-5 flex-shrink-0"
+                  style={{ color: "var(--t3)" }}
+                >
                   {i + 1}
                 </span>
-                <span className="text-[10px] font-mono flex-1 truncate" style={{ color: "var(--t)" }}>
-                  {seed.handle}
+                <span
+                  className="text-[10px] font-mono flex-1 truncate"
+                  style={{ color: "var(--t)" }}
+                >
+                  {seed.handle ?? "—"}
                 </span>
                 <span
                   className="text-[8px] font-mono px-[5px] py-[1px] rounded-[8px] border w-[56px] text-center flex-shrink-0"
@@ -186,27 +204,33 @@ function SeedList() {
                     borderColor: `${typeColors[seed.account_type] ?? "#888"}44`,
                   }}
                 >
-                  {seed.account_type}
+                  {seed.account_type ?? "—"}
                 </span>
-                <span className="text-[8px] font-mono w-[36px] text-right flex-shrink-0" style={{ color: "var(--t2)" }}>
-                  {seed.avg_eng_rate_14d ? `${(seed.avg_eng_rate_14d * 100).toFixed(1)}%` : "—"}
+                <span
+                  className="text-[8px] font-mono w-[36px] text-right flex-shrink-0"
+                  style={{ color: "var(--t2)" }}
+                >
+                  {seed.avg_eng_rate_14d
+                    ? `${(seed.avg_eng_rate_14d * 100).toFixed(1)}%`
+                    : "—"}
                 </span>
-                <span className="text-[8px] font-mono w-[36px] text-right flex-shrink-0" style={{ color: trendColor }}>
-                  {seed.trend_direction === "up" ? "↑ up" : seed.trend_direction === "down" ? "↓ dn" : "— flat"}
+                <span
+                  className="text-[8px] font-mono w-[36px] text-right flex-shrink-0"
+                  style={{ color: trendColor }}
+                >
+                  {seed.trend_direction === "up"
+                    ? "↑ up"
+                    : seed.trend_direction === "down"
+                    ? "↓ dn"
+                    : "— flat"}
                 </span>
                 <div className="flex gap-[2px] w-[60px] justify-center flex-shrink-0">
-                  {["TT", "IG", "YT"].map((p) => (
-                    <div
-                      key={p}
-                      className="text-[6px] font-mono w-[14px] h-[14px] rounded-[3px] flex items-center justify-center"
-                      style={{
-                        background: `${["#ff2d55","#e1306c","#ff0000"][["TT","IG","YT"].indexOf(p)]}22`,
-                        color: ["#ff2d55","#e1306c","#ff0000"][["TT","IG","YT"].indexOf(p)],
-                      }}
-                    >
-                      {p}
-                    </div>
-                  ))}
+                  <span
+                    className="text-[8px] font-mono"
+                    style={{ color: "var(--t2)" }}
+                  >
+                    {seed.platform ?? "—"}
+                  </span>
                 </div>
               </div>
             );
