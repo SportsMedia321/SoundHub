@@ -174,7 +174,7 @@ export default function PostQueue() {
   const { data, mutate, isLoading } = useSWR("queue", getQueue, {
     refreshInterval: 15000,
   });
-  const posts = data?.posts ?? [];
+  const posts = Array.isArray(data?.posts) ? data.posts : [];
   const pending = posts.filter((p) => p.approval_status === "pending");
   const approved = posts.filter((p) => p.approval_status === "approved");
 
