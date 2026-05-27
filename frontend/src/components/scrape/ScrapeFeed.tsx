@@ -174,10 +174,10 @@ export default function ScrapeFeed({
     { refreshInterval: 60000 }
   );
 
-  const clips = clipsData?.clips ?? [];
+  const clips = Array.isArray(clipsData?.clips) ? clipsData.clips : [];
   const stats = statsData;
 
-  const sorted = [...clips]
+  const sorted = [...(Array.isArray(clips) ? clips : [])]
     .filter((c) =>
       search
         ? c.caption?.toLowerCase().includes(search.toLowerCase()) ||
@@ -218,7 +218,7 @@ export default function ScrapeFeed({
   };
 
   const selectedClips = React.useMemo(
-    () => sorted.filter((c) => selected.has(c.id)),
+    () => (Array.isArray(sorted) ? sorted : []).filter((c) => selected.has(c.id)),
     [sorted, selected]
   );
 
