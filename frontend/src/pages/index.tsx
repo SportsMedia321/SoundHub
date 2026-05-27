@@ -15,7 +15,7 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "agents", label: "Agents" },
 ];
 
-class ErrorBoundary extends React.Component
+class ErrorBoundary extends React.Component<
   { children: React.ReactNode; label: string },
   { hasError: boolean; error: string }
 > {
