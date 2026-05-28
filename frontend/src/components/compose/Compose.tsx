@@ -42,13 +42,17 @@ export default function Compose({
   }, [tracks]);
 
   useEffect(() => {
-    if (stripOrig) setOrigVol(0);
-    if (!stripOrig && layerOrig && origVol === 0) setOrigVol(15);
+    if (stripOrig) {
+      setOrigVol(0);
+      setLayerOrig(false);
+    }
   }, [stripOrig]);
 
   useEffect(() => {
-    if (layerOrig && origVol === 0) setOrigVol(15);
-    if (!layerOrig) setOrigVol(0);
+    if (layerOrig) {
+      setStripOrig(false);
+      if (origVol === 0) setOrigVol(20);
+    }
   }, [layerOrig]);
 
   const handleCompose = async () => {
@@ -124,15 +128,15 @@ export default function Compose({
           {/* Thumb / Video Preview */}
           <div
             className="w-full flex items-center justify-center relative overflow-hidden"
-            style={{ maxHeight: 320, aspectRatio: "9/16", background: "var(--s3)" }}
+            style={{ height: 200, background: "var(--s3)" }}
           >
             {activeClip.preview_url ? (
               <video
                 src={activeClip.preview_url}
-                className="absolute inset-0 w-full h-full object-cover"
+                className="w-full h-full object-contain"
                 controls
                 playsInline
-                style={{ zIndex: 10 }}
+                style={{ zIndex: 10, maxHeight: 200, width: "100%" }}
               />
             ) : (
               <>
