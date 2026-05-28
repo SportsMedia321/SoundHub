@@ -128,7 +128,7 @@ export default function Compose({
           {/* Thumb / Video Preview */}
           <div
             className="w-full flex items-center justify-center relative overflow-hidden"
-            style={{ height: 200, background: "var(--s3)" }}
+            style={{ height: 400, background: "var(--s3)" }}
           >
             {activeClip.preview_url ? (
               <video
@@ -136,7 +136,7 @@ export default function Compose({
                 className="w-full h-full object-contain"
                 controls
                 playsInline
-                style={{ zIndex: 10, maxHeight: 200, width: "100%" }}
+                style={{ zIndex: 10, maxHeight: 400, width: "100%" }}
               />
             ) : (
               <>
