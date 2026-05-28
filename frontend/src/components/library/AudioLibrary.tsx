@@ -64,7 +64,7 @@ export default function AudioLibrary() {
   const { data, mutate, isLoading } = useSWR("audio", getAudio, {
     refreshInterval: 0,
   });
-  const tracks = (data?.tracks ?? []).filter((t) =>
+  const tracks = (Array.isArray(data?.tracks) ? data.tracks : []).filter((t) =>
     search ? t.name.toLowerCase().includes(search.toLowerCase()) : true
   );
 
@@ -95,10 +95,10 @@ export default function AudioLibrary() {
     value: string
   ) => {
     const leagues = type === "league"
-      ? track.league_preference.includes(value)
-        ? track.league_preference.filter((l) => l !== value)
+      ? (Array.isArray(track.league_preference) ? track.league_preference : []).includes(value)
+        ? (Array.isArray(track.league_preference) ? track.league_preference : []).filter((l) => l !== value)
         : [...track.league_preference, value]
-      : track.league_preference;
+      : (Array.isArray(track.league_preference) ? track.league_preference : []);
 
     const platformNative = { ...(track.platform_native ?? {}) };
     if (type === "platform") {
@@ -235,7 +235,7 @@ export default function AudioLibrary() {
                           {PLAT_LABELS[p] ?? p} native
                         </Pill>
                       ))}
-                      {(track.league_preference ?? []).map((l) => (
+                      {(Array.isArray(track.league_preference) ? track.league_preference : []).map((l) => (
                         <Pill key={l} className="bg-[var(--s3)] text-[var(--t2)] border-[var(--bo)]">
                           {l}
                         </Pill>
