@@ -556,8 +556,7 @@ def run_scrape_cycle():
     try:
         seeds = load_seeds(tiktok_first=False)
 
-    # Interleave platforms so TikTok and Instagram alternate per category
-    by_category: dict = {}
+    by_category = {}
     for s in seeds:
         cat = s["category"]
         if cat not in by_category:
@@ -566,7 +565,6 @@ def run_scrape_cycle():
         if plat in by_category[cat]:
             by_category[cat][plat].append(s)
 
-    # Build interleaved list: for each category TikTok first then Instagram then YouTube
     interleaved = []
     for cat in ["NFL", "NBA", "MLB", "NHL", "MLS", "US Intl", "MISC"]:
         if cat not in by_category:
