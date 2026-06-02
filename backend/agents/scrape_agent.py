@@ -555,6 +555,9 @@ def run_scrape_cycle():
 
     try:
         seeds = load_seeds(tiktok_first=False)
+    except Exception as e:
+        print(f"FATAL: Could not load seeds from database: {e}")
+        return
 
     by_category = {}
     for s in seeds:
@@ -582,9 +585,6 @@ def run_scrape_cycle():
                 interleaved.append(yt[i])
 
     seeds = interleaved
-    except Exception as e:
-        print(f"FATAL: Could not load seeds from database: {e}")
-        return
     ingested = 0
     target = THRESHOLDS["global"]["target_clips_per_24hr"]
 
