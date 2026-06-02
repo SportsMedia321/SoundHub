@@ -164,7 +164,7 @@ def scrape_instagram_account(handle: str) -> list:
                         "caption": p.get("title", "")[:500],
                         "duration_seconds": int(p.get("duration") or 0),
                         "posted_at": str(p.get("upload_date", "")),
-                        "platform": "instagram",
+                        "platform": "youtube",
                         "source_account": handle,
                     })
                 except Exception:
