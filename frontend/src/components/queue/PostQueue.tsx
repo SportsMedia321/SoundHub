@@ -22,7 +22,7 @@ function PostCard({
   onApprove: (id: string) => void;
   onApproveNow: (id: string) => void;
   onEdit: (id: string, caption: string) => void;
-})
+}) {
   const [editMode, setEditMode] = useState(false);
   const [caption, setCaption] = useState(post.caption_final || post.caption_generated || "");
   const [newVol, setNewVol] = useState(Math.round((post.audio_new_volume ?? 1) * 100));
@@ -237,6 +237,7 @@ export default function PostQueue() {
                 key={post.id}
                 post={post}
                 onApprove={handleApprove}
+                onApproveNow={handleApproveNow}
                 onEdit={handleEdit}
               />
             ))}
