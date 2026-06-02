@@ -121,46 +121,99 @@ def scrape_tiktok_account(handle: str) -> list:
 
 
 def scrape_instagram_account(handle: str) -> list:
-    """Instagram Reels scrape via yt-dlp."""
-    try:
-        url = f"https://www.instagram.com/{handle.lstrip('@')}/reels/"
-        result = subprocess.run(
-            [
-                "yt-dlp",
-                "--flat-playlist",
-                "--print-json",
-                "--playlist-end", "15",
-                "--no-warnings",
-                "--socket-timeout", "10",
-                url,
-            ],
-            capture_output=True, text=True, timeout=45
-        )
-        posts = []
-        for line in result.stdout.strip().split("\n"):
-            if not line:
-                continue
-            try:
-                p = json.loads(line)
-                posts.append({
-                    "url": p.get("webpage_url", ""),
-                    "views_at_ingest": p.get("view_count") or 0,
-                    "likes_at_ingest": p.get("like_count") or 0,
-                    "comments_at_ingest": p.get("comment_count") or 0,
-                    "shares_at_ingest": 0,
-                    "saves_at_ingest": 0,
-                    "caption": p.get("title", "")[:500],
-                    "duration_seconds": int(p.get("duration") or 0),
-                    "posted_at": str(p.get("upload_date", "")),
-                    "platform": "instagram",
-                    "source_account": handle,
-                })
-            except Exception:
-                continue
-        return posts
-    except Exception as e:
-        print(f"IG scrape failed for {handle}: {e}")
-        return []
+    """Instagram Reels scrape via yt-dlp with multiple fallback strategies."""
+    clean_handle = handle.lstrip("@")
+    posts = []
+
+    # Strategy 1 — direct reels page
+    for url in [
+        f"https://www.instagram.com/{clean_handle}/reels/",
+        f"https://www.instagram.com/{clean_handle}/",
+    ]:
+        if posts:
+            break
+        try:
+            result = subprocess.run(
+                [
+                    "yt-dlp",
+                    "--flat-playlist",
+                    "--print-json",
+                    "--playlist-end", "15",
+                    "--no-warnings",
+                    "--socket-timeout", "15",
+                    "--add-header", "User-Agent:Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15",
+                    "--add-header", "Accept-Language:en-US,en;q=0.9",
+                    url,
+                ],
+                capture_output=True, text=True, timeout=45
+            )
+            for line in result.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                try:
+                    p = json.loads(line)
+                    if not p.get("id"):
+                        continue
+                    posts.append({
+                        "url": p.get("webpage_url") or f"https://www.instagram.com/reel/{p.get('id', '')}/",
+                        "views_at_ingest": p.get("view_count") or 0,
+                        "likes_at_ingest": p.get("like_count") or 0,
+                        "comments_at_ingest": p.get("comment_count") or 0,
+                        "shares_at_ingest": 0,
+                        "saves_at_ingest": 0,
+                        "caption": p.get("title", "")[:500],
+                        "duration_seconds": int(p.get("duration") or 0),
+                        "posted_at": str(p.get("upload_date", "")),
+                        "platform": "instagram",
+                        "source_account": handle,
+                    })
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"IG scrape failed for {handle} ({url}): {e}")
+
+    # Strategy 2 — YouTube search fallback for IG accounts
+    if not posts:
+        try:
+            search_url = f"ytsearch10:{clean_handle} instagram reels highlights"
+            result = subprocess.run(
+                [
+                    "yt-dlp",
+                    "--flat-playlist",
+                    "--print-json",
+                    "--no-warnings",
+                    "--socket-timeout", "10",
+                    search_url,
+                ],
+                capture_output=True, text=True, timeout=30
+            )
+            for line in result.stdout.strip().split("\n"):
+                if not line:
+                    continue
+                try:
+                    p = json.loads(line)
+                    duration = p.get("duration") or 0
+                    if duration > 120:
+                        continue
+                    posts.append({
+                        "url": f"https://youtube.com/watch?v={p.get('id', '')}",
+                        "views_at_ingest": p.get("view_count") or 0,
+                        "likes_at_ingest": p.get("like_count") or 0,
+                        "comments_at_ingest": p.get("comment_count") or 0,
+                        "shares_at_ingest": 0,
+                        "saves_at_ingest": 0,
+                        "caption": p.get("title", "")[:500],
+                        "duration_seconds": int(duration),
+                        "posted_at": str(p.get("upload_date", "")),
+                        "platform": "instagram",
+                        "source_account": handle,
+                    })
+                except Exception:
+                    continue
+        except Exception as e:
+            print(f"IG YT fallback failed for {handle}: {e}")
+
+    return posts
 
 
 def scrape_youtube_account(handle: str) -> list:
@@ -501,7 +554,36 @@ def run_scrape_cycle():
         print(f"WARNING: Could not update agent state: {e}")
 
     try:
-        seeds = load_seeds(tiktok_first=True)
+        seeds = load_seeds(tiktok_first=False)
+
+    # Interleave platforms so TikTok and Instagram alternate per category
+    by_category: dict = {}
+    for s in seeds:
+        cat = s["category"]
+        if cat not in by_category:
+            by_category[cat] = {"tiktok": [], "instagram": [], "youtube": []}
+        plat = s["platform"]
+        if plat in by_category[cat]:
+            by_category[cat][plat].append(s)
+
+    # Build interleaved list: for each category TikTok first then Instagram then YouTube
+    interleaved = []
+    for cat in ["NFL", "NBA", "MLB", "NHL", "MLS", "US Intl", "MISC"]:
+        if cat not in by_category:
+            continue
+        tt = by_category[cat]["tiktok"]
+        ig = by_category[cat]["instagram"]
+        yt = by_category[cat]["youtube"]
+        max_len = max(len(tt), len(ig), len(yt), 1)
+        for i in range(max_len):
+            if i < len(tt):
+                interleaved.append(tt[i])
+            if i < len(ig):
+                interleaved.append(ig[i])
+            if i < len(yt):
+                interleaved.append(yt[i])
+
+    seeds = interleaved
     except Exception as e:
         print(f"FATAL: Could not load seeds from database: {e}")
         return
@@ -529,8 +611,9 @@ def run_scrape_cycle():
             continue
 
         account_ingested = 0
+        max_per_account = 3 if platform == "tiktok" else 4
         for post in posts:
-            if account_ingested >= 3:
+            if account_ingested >= max_per_account:
                 break
             if process_post(post, category, account_type, "account_seed"):
                 ingested += 1
