@@ -399,7 +399,7 @@ def estimate_post_age_hours(posted_at: str) -> float:
     so posts with unknown age never pass the recency gate.
     """
     if not posted_at or posted_at in ("", "None", "null"):
-        return 999.0
+        return 24.0
     try:
         formats = ["%Y%m%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S"]
         dt = None
@@ -410,11 +410,11 @@ def estimate_post_age_hours(posted_at: str) -> float:
             except Exception:
                 continue
         if not dt:
-            return 999.0
+            return 24.0
         age = (datetime.now(timezone.utc) - dt).total_seconds() / 3600
         return age
     except Exception:
-        return 999.0
+        return 24.0
 
 
 def url_seen(url: str) -> bool:
