@@ -15,12 +15,14 @@ const PLATFORM_FMTS: Record<string, string> = {
 function PostCard({
   post,
   onApprove,
+  onApproveNow,
   onEdit,
 }: {
   post: Post;
   onApprove: (id: string) => void;
+  onApproveNow: (id: string) => void;
   onEdit: (id: string, caption: string) => void;
-}) {
+})
   const [editMode, setEditMode] = useState(false);
   const [caption, setCaption] = useState(post.caption_final || post.caption_generated || "");
   const [newVol, setNewVol] = useState(Math.round((post.audio_new_volume ?? 1) * 100));
@@ -156,11 +158,15 @@ function PostCard({
           ) : (
             <>
               <Btn size="sm" onClick={() => setEditMode(true)}>Edit</Btn>
-              <Btn size="sm">Reschedule</Btn>
               {post.approval_status === "pending" && (
-                <Btn size="sm" variant="primary" onClick={() => onApprove(post.id)}>
-                  Approve
-                </Btn>
+                <>
+                  <Btn size="sm" variant="primary" onClick={() => onApproveNow(post.id)}>
+                    Post now
+                  </Btn>
+                  <Btn size="sm" onClick={() => onApprove(post.id)}>
+                    Schedule
+                  </Btn>
+                </>
               )}
             </>
           )}
@@ -179,6 +185,11 @@ export default function PostQueue() {
   const approved = posts.filter((p) => p.approval_status === "approved");
 
   const handleApprove = async (id: string) => {
+    await approvePost(id);
+    mutate();
+  };
+  
+  const handleApproveNow = async (id: string) => {
     await approvePost(id);
     mutate();
   };
