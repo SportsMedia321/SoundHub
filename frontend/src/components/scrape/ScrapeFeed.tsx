@@ -162,6 +162,7 @@ export default function ScrapeFeed({
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("Viral score");
   const [search, setSearch] = useState("");
+  const [platformFilter, setPlatformFilter] = useState<Set<string>>(new Set(["tiktok", "instagram", "youtube"]));
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [refreshing, setRefreshing] = useState(false);
 
@@ -179,11 +180,12 @@ export default function ScrapeFeed({
 
   const sorted = [...(Array.isArray(clips) ? clips : [])]
     .filter((c) =>
-      search
+      platformFilter.has(c.source_platform) &&
+      (search
         ? c.caption?.toLowerCase().includes(search.toLowerCase()) ||
           c.source_account?.toLowerCase().includes(search.toLowerCase()) ||
           c.sport_category?.toLowerCase().includes(search.toLowerCase())
-        : true
+        : true)
     )
     .sort((a, b) => {
       if (sort === "Views") return b.views_at_ingest - a.views_at_ingest;
@@ -281,6 +283,39 @@ export default function ScrapeFeed({
         >
           {SORTS.map((s) => <option key={s}>{s}</option>)}
         </select>
+        <div className="flex gap-[4px]">
+          {[
+            { key: "tiktok", label: "TT", color: "#ff2d55" },
+            { key: "instagram", label: "IG", color: "#e1306c" },
+            { key: "youtube", label: "YT", color: "#ff0000" },
+          ].map(({ key, label, color }) => {
+            const on = platformFilter.has(key);
+            return (
+              <button
+                key={key}
+                onClick={() => {
+                  setPlatformFilter((prev) => {
+                    const next = new Set(prev);
+                    if (next.has(key)) {
+                      if (next.size > 1) next.delete(key);
+                    } else {
+                      next.add(key);
+                    }
+                    return next;
+                  });
+                }}
+                className="text-[9px] font-mono px-[8px] py-[4px] rounded-md border transition-all"
+                style={{
+                  background: on ? `${color}22` : "var(--s2)",
+                  color: on ? color : "var(--t3)",
+                  borderColor: on ? `${color}55` : "var(--bo)",
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
         <div className="ml-auto flex gap-[6px]">
           <Btn onClick={handleRefresh} disabled={refreshing}>
             {refreshing ? "Refreshing..." : "↺ Refresh now"}
