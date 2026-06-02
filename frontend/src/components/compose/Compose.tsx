@@ -15,13 +15,18 @@ const WF = [22, 35, 50, 38, 58, 28, 45, 33, 55, 40, 30, 48];
 function WaveformBar({
   heights, progress, color, label,
   inPoint, outPoint, onInChange, onOutChange,
+  trackDuration,
+  showInTimeLabel,
 }: {
   heights: number[]; progress: number; color: string; label: string;
   inPoint: number; outPoint: number;
   onInChange: (v: number) => void; onOutChange: (v: number) => void;
+  trackDuration?: number;
+  showInTimeLabel?: boolean;
 }) {
   const barRef = useRef<HTMLDivElement>(null);
   const dragging = useRef<"in" | "out" | null>(null);
+  const [hovering, setHovering] = React.useState<string | null>(null);
 
   const getPct = useCallback((clientX: number) => {
     if (!barRef.current) return 0;
@@ -42,33 +47,89 @@ function WaveformBar({
     return () => { window.removeEventListener("mousemove", handleMove); window.removeEventListener("mouseup", handleUp); };
   }, [inPoint, outPoint, onInChange, onOutChange, getPct]);
 
+  const inTimeSec = trackDuration ? (inPoint / 100) * trackDuration : null;
+  const outTimeSec = trackDuration ? (outPoint / 100) * trackDuration : null;
+  const inTimeLabel = inTimeSec !== null ? fmtDur(Math.round(inTimeSec)) : `${Math.round(inPoint)}%`;
+  const outTimeLabel = outTimeSec !== null ? fmtDur(Math.round(outTimeSec)) : `${Math.round(outPoint)}%`;
+
   return (
     <div>
-      <div className="text-[8px] font-mono mb-[4px]" style={{ color: "var(--t3)" }}>{label}</div>
+      {/* Label row with live time indicators */}
+      <div className="flex items-center justify-between mb-[4px]">
+        <div className="text-[8px] font-mono" style={{ color: "var(--t3)" }}>{label}</div>
+        {showInTimeLabel && (
+          <div className="flex items-center gap-[8px]">
+            <span className="text-[8px] font-mono px-[5px] py-[1px] rounded" style={{ background: `${color}22`, color, border: `0.5px solid ${color}55` }}>
+              in: {inTimeLabel}
+            </span>
+            <span className="text-[8px] font-mono px-[5px] py-[1px] rounded" style={{ background: "rgba(255,255,255,0.05)", color: "var(--t2)", border: "0.5px solid var(--bo)" }}>
+              out: {outTimeLabel}
+            </span>
+          </div>
+        )}
+      </div>
+
       <div ref={barRef} className="relative rounded-md" style={{ height: 40, background: "var(--s3)", cursor: "crosshair" }}>
+        {/* Waveform bars */}
         <div className="flex items-end gap-[1px] h-full px-[4px] absolute inset-0">
           {heights.map((h, i) => {
             const pct = (i / heights.length) * 100;
             const inTrim = pct >= inPoint && pct <= outPoint;
             const played = (i / heights.length) <= progress;
             return (
-              <div key={i} className="flex-1 rounded-sm" style={{
+              <div key={i} className="flex-1 rounded-sm transition-colors" style={{
                 height: `${Math.round((h / 58) * 80)}%`,
                 background: played && inTrim ? color : inTrim ? `${color}55` : "rgba(255,255,255,0.07)",
               }} />
             );
           })}
         </div>
-        <div className="absolute top-0 bottom-0 pointer-events-none rounded-l-md" style={{ left: 0, width: `${inPoint}%`, background: "rgba(0,0,0,0.55)" }} />
-        <div className="absolute top-0 bottom-0 pointer-events-none rounded-r-md" style={{ left: `${outPoint}%`, right: 0, background: "rgba(0,0,0,0.55)" }} />
-        <div className="absolute top-0 bottom-0 w-[1.5px] pointer-events-none" style={{ left: `${progress * 100}%`, background: color, zIndex: 5 }} />
-        <div className="absolute top-0 bottom-0 flex items-center justify-center" style={{ left: `${inPoint}%`, width: 12, transform: "translateX(-50%)", zIndex: 8, cursor: "ew-resize" }} onMouseDown={(e) => { e.stopPropagation(); dragging.current = "in"; }}>
-          <div style={{ width: 3, height: "100%", background: color, borderRadius: 2 }} />
-          <div className="absolute w-[14px] h-[14px] rounded-sm" style={{ background: color, top: "50%", transform: "translateY(-50%)" }} />
+
+        {/* Darkened regions outside trim */}
+        <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: 0, width: `${inPoint}%`, background: "rgba(0,0,0,0.55)", borderRadius: "6px 0 0 6px" }} />
+        <div className="absolute top-0 bottom-0 pointer-events-none" style={{ left: `${outPoint}%`, right: 0, background: "rgba(0,0,0,0.55)", borderRadius: "0 6px 6px 0" }} />
+
+        {/* Playhead */}
+        <div className="absolute top-0 bottom-0 w-[1.5px] pointer-events-none" style={{ left: `${progress * 100}%`, background: color, zIndex: 5, boxShadow: `0 0 4px ${color}80` }} />
+
+        {/* IN handle — clean thin bar with time tooltip */}
+        <div
+          className="absolute top-0 bottom-0"
+          style={{ left: `${inPoint}%`, width: 16, transform: "translateX(-50%)", zIndex: 8, cursor: "ew-resize" }}
+          onMouseDown={(e) => { e.stopPropagation(); dragging.current = "in"; }}
+          onMouseEnter={() => setHovering("in")}
+          onMouseLeave={() => setHovering(null)}
+        >
+          {/* The bar itself */}
+          <div className="absolute top-0 bottom-0" style={{ left: "50%", transform: "translateX(-50%)", width: 2, background: color, borderRadius: 2 }} />
+          {/* Top cap */}
+          <div className="absolute" style={{ top: 0, left: "50%", transform: "translateX(-50%)", width: 8, height: 4, background: color, borderRadius: "0 0 3px 3px" }} />
+          {/* Bottom cap */}
+          <div className="absolute" style={{ bottom: 0, left: "50%", transform: "translateX(-50%)", width: 8, height: 4, background: color, borderRadius: "3px 3px 0 0" }} />
+          {/* Time tooltip */}
+          {(hovering === "in" || dragging.current === "in") && (
+            <div className="absolute pointer-events-none" style={{ bottom: "calc(100% + 4px)", left: "50%", transform: "translateX(-50%)", background: color, color: "#000", fontSize: 8, fontFamily: "var(--fm)", fontWeight: 600, padding: "2px 5px", borderRadius: 3, whiteSpace: "nowrap" }}>
+              {inTimeLabel}
+            </div>
+          )}
         </div>
-        <div className="absolute top-0 bottom-0 flex items-center justify-center" style={{ left: `${outPoint}%`, width: 12, transform: "translateX(-50%)", zIndex: 8, cursor: "ew-resize" }} onMouseDown={(e) => { e.stopPropagation(); dragging.current = "out"; }}>
-          <div style={{ width: 3, height: "100%", background: color, borderRadius: 2 }} />
-          <div className="absolute w-[14px] h-[14px] rounded-sm" style={{ background: color, top: "50%", transform: "translateY(-50%)" }} />
+
+        {/* OUT handle — same clean design */}
+        <div
+          className="absolute top-0 bottom-0"
+          style={{ left: `${outPoint}%`, width: 16, transform: "translateX(-50%)", zIndex: 8, cursor: "ew-resize" }}
+          onMouseDown={(e) => { e.stopPropagation(); dragging.current = "out"; }}
+          onMouseEnter={() => setHovering("out")}
+          onMouseLeave={() => setHovering(null)}
+        >
+          <div className="absolute top-0 bottom-0" style={{ left: "50%", transform: "translateX(-50%)", width: 2, background: color, borderRadius: 2 }} />
+          <div className="absolute" style={{ top: 0, left: "50%", transform: "translateX(-50%)", width: 8, height: 4, background: color, borderRadius: "0 0 3px 3px" }} />
+          <div className="absolute" style={{ bottom: 0, left: "50%", transform: "translateX(-50%)", width: 8, height: 4, background: color, borderRadius: "3px 3px 0 0" }} />
+          {(hovering === "out" || dragging.current === "out") && (
+            <div className="absolute pointer-events-none" style={{ bottom: "calc(100% + 4px)", left: "50%", transform: "translateX(-50%)", background: color, color: "#000", fontSize: 8, fontFamily: "var(--fm)", fontWeight: 600, padding: "2px 5px", borderRadius: 3, whiteSpace: "nowrap" }}>
+              {outTimeLabel}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -245,10 +306,10 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
           </div>
 
           {/* Video */}
-          <div className="relative w-full" style={{ height: 400, background: "#000" }}
+          <div className="relative w-full" style={{ height: 520, background: "#000" }}
             onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
             {activeClip.preview_url ? (
-              <video ref={videoRef} src={activeClip.preview_url} className="w-full h-full" style={{ objectFit: "contain" }}
+              <video ref={videoRef} src={activeClip.preview_url} className="w-full h-full" style={{ objectFit: "contain", maxHeight: 520 }}
                 playsInline onTimeUpdate={handleTimeUpdate} onLoadedMetadata={handleLoadedMetadata}
                 onEnded={() => { stopAudio(); setPlaying(false); setProgress(0); }} onClick={handleTogglePlay} />
             ) : (
@@ -318,11 +379,13 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
           </div>
           <WaveformBar heights={clipWF} progress={progress} color="#00e87a"
             label={`Clip · ${fmtDur(Math.round(trimmedDuration))} of ${fmtDur(Math.round(clipDuration))} selected`}
-            inPoint={clipIn} outPoint={clipOut} onInChange={setClipIn} onOutChange={setClipOut} />
+            inPoint={clipIn} outPoint={clipOut} onInChange={setClipIn} onOutChange={setClipOut}
+            trackDuration={clipDuration} showInTimeLabel={true} />
           {activeAudio ? (
             <WaveformBar heights={audioWF} progress={progress} color="#1d9bf0"
-              label={`Audio: ${activeAudio.name} · ${fmtDur(Math.round(audioTrimmedDuration))} selected${loopCount > 1 ? ` · loops ${loopCount}x` : ""}`}
-              inPoint={audioIn} outPoint={audioOut} onInChange={setAudioIn} onOutChange={setAudioOut} />
+              label={`Audio: ${activeAudio.name} · ${fmtDur(Math.round(audioTrimmedDuration))} selected`}
+              inPoint={audioIn} outPoint={audioOut} onInChange={setAudioIn} onOutChange={setAudioOut}
+              trackDuration={audioTrackDuration} showInTimeLabel={true} />
           ) : (
             <div className="text-[9px] font-mono" style={{ color: "var(--t3)" }}>Select an audio track to enable audio timeline</div>
           )}
