@@ -358,7 +358,7 @@ def download_clip(url: str, clip_id: str) -> str | None:
     """Download video with yt-dlp, return local temp path."""
     out = f"/tmp/{clip_id}.mp4"
     try:
-        subprocess.run(
+        result = subprocess.run(
             [
                 "yt-dlp",
                 "-f", "bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best",
@@ -367,15 +367,22 @@ def download_clip(url: str, clip_id: str) -> str | None:
                 "--no-playlist",
                 "--max-filesize", "200m",
                 "--socket-timeout", "15",
+                "--no-warnings",
                 url,
             ],
-            timeout=120,
-            check=True,
+            timeout=90,
             capture_output=True,
         )
+        if result.returncode != 0:
+            err = result.stderr.decode()[:200] if result.stderr else "unknown"
+            print(f"    Download failed ({result.returncode}): {url[:60]} — {err}")
+            return None
         return out if os.path.exists(out) else None
+    except subprocess.TimeoutExpired:
+        print(f"    Download timeout: {url[:60]}")
+        return None
     except Exception as e:
-        print(f"Download failed for {url}: {e}")
+        print(f"    Download error: {url[:60]} — {e}")
         return None
 
 
