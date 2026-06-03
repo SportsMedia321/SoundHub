@@ -45,7 +45,7 @@ def health():
 # ── Clips ──────────────────────────────────────────────────────────────────
 
 @app.get("/clips")
-def get_clips(category: str = None, limit: int = 60):
+def get_clips(category: str = None, limit: int = 150):
     clips = get_active_clips(category=category, limit=limit)
     # Add presigned URLs for thumbnails
     for clip in clips:
