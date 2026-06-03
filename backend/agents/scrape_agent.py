@@ -633,6 +633,11 @@ def run_scrape_cycle():
         else:
             print(f"    — {len(posts)} posts found for {handle} ({platform})")
 
+        if not posts:
+            print(f"    — No posts returned for {handle} ({platform})")
+        else:
+            print(f"    — {len(posts)} posts found for {handle} ({platform})")
+
         account_ingested = 0
         max_per_account = 3 if platform == "tiktok" else 4
         for post in posts:
