@@ -125,3 +125,9 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
         return False
 
     return True
+
+
+def get_tier_number(tier_name: str) -> int:
+    """Convert tier name to integer for database storage."""
+    mapping = {"tier_1": 1, "tier_2": 2, "misc": 3}
+    return mapping.get(tier_name, 1)
