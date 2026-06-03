@@ -24,6 +24,7 @@ from utils.scoring import (
     load_thresholds, get_tier_config, calculate_engagement_rate,
     calculate_viral_score, passes_threshold, get_tier_number
 )
+from utils.pool_manager import should_ingest_tiktok, should_ingest_other, enforce_pool_caps
 from utils.r2 import upload_raw_clip, delete_file
 
 
@@ -496,6 +497,18 @@ def process_post(post: dict, category: str, account_type: str, discovery_method:
 
     print(f"    ✓ Passed: raw={viral_score:.1f} adjusted={adjusted:.1f} cutoff={cutoff} views={views:,} platform={platform} category={category}")
 
+    # Check pool capacity before downloading
+    from db.client import get_db
+    _db = get_db()
+    if platform == "tiktok":
+        if not should_ingest_tiktok(viral_score, _db):
+            print(f"    ✗ TikTok pool full and score {viral_score:.1f} below floor — skipping")
+            return False
+    else:
+        if not should_ingest_other(viral_score, _db):
+            print(f"    ✗ IG/YT pool full and score {viral_score:.1f} below TikTok floor — skipping")
+            return False
+
     clip_id = generate_id("clip")
     now = datetime.now(timezone.utc)
     expires = now + timedelta(hours=48)
@@ -637,6 +650,13 @@ def run_scrape_cycle():
 
     expired = expire_clips()
     print(f"\nExpired {expired} clips past 48hr TTL.")
+
+    # Enforce pool caps — 100 TikTok, 50 IG/YT, 150 hard cap
+    try:
+        from db.client import get_db
+        enforce_pool_caps(get_db())
+    except Exception as e:
+        print(f"WARNING: Pool enforcement failed: {e}")
 
     next_run = (datetime.now(timezone.utc) + timedelta(hours=12)).isoformat()
     try:
