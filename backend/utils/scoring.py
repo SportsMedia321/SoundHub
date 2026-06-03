@@ -64,27 +64,48 @@ def calculate_viral_score(
 
 def passes_threshold(post: dict, category: str, platform: str, thresholds: dict) -> bool:
     """
-    Primary filter: viral score with TikTok 1.35x boost.
-    Tier 1 (NFL/NBA): cutoff 19.5 — lowest bar, priority saturation
+    Primary filter: viral score with platform boosts.
+    Tier 1 (NFL/NBA): cutoff 19.5
     Tier 2 (MLB/NHL/MLS/US Intl): cutoff 22.0
     MISC: cutoff 24.0
-    Falls back to raw threshold checks if viral score is zero.
+    Instagram special path: views-only scoring when engagement is zero.
     """
     viral_score = post.get("viral_score", 0)
     post_age_hr = post.get("post_event_hours", 999)
     views = post.get("views_at_ingest", 0)
+    likes = post.get("likes_at_ingest", 0)
+    comments = post.get("comments_at_ingest", 0)
+    shares = post.get("shares_at_ingest", 0)
 
     tier_cfg, tier_name = get_tier_config(category, thresholds)
 
-    # Reject posts older than recency gate
-    if post_age_hr > tier_cfg["recency_gate_hours"]:
+    # Recency gate
+    if post_age_hr != 999 and post_age_hr > tier_cfg["recency_gate_hours"]:
         return False
 
-    # Reject posts with fewer than 1000 views
-    if views < 1000:
+    # Views gate — Instagram often returns 0 views too so skip for IG
+    if platform != "instagram" and views < 1000:
+        return False
+    if platform == "instagram" and views == 0:
         return False
 
-    # Primary filter — viral score with platform boosts
+    # Instagram special path — engagement data unavailable via yt-dlp
+    # Score purely on views with a strong boost to compensate
+    engagement_available = likes > 0 or comments > 0 or shares > 0
+    if platform == "instagram" and not engagement_available:
+        # Views-only cutoffs — how many views in assumed 24hrs to qualify
+        instagram_views_cutoff = {
+            "tier_1": 1_000_000,   # 1M+ views for NFL/NBA
+            "tier_2": 1_500_000,   # 1.5M+ views for MLB/NHL/MLS
+            "misc":   2_000_000,   # 2M+ views for MISC
+        }
+        cutoff_views = instagram_views_cutoff.get(tier_name, 1_000_000)
+        passes = views >= cutoff_views
+        if not passes:
+            return False
+        return True
+
+    # Standard path — full viral score with platform boosts
     if viral_score > 0:
         min_score = {
             "tier_1": 19.5,
@@ -92,25 +113,15 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
             "misc":   24.0,
         }
         cutoff = min_score.get(tier_name, 19.5)
-        tiktok_score_boost = 1.35 if platform == "tiktok" else 1.0
-        instagram_score_boost = 1.15 if platform == "instagram" else 1.0
-        adjusted_score = viral_score * tiktok_score_boost * instagram_score_boost
-        return adjusted_score >= cutoff
+        tiktok_boost = 1.35 if platform == "tiktok" else 1.0
+        instagram_boost = 1.15 if platform == "instagram" else 1.0
+        adjusted = viral_score * tiktok_boost * instagram_boost
+        return adjusted >= cutoff
 
-    # Fallback to raw thresholds if viral score is zero
+    # Fallback raw threshold checks
     tt_mult = thresholds["global"]["tiktok_velocity_multiplier"] if platform == "tiktok" else 1.0
-    effective_views_threshold = tier_cfg["min_views_in_6hr"] / tt_mult
-    effective_shares_threshold = tier_cfg["min_shares_in_4hr"] / tt_mult
-    eng_rate = post.get("engagement_rate", 0.0)
-    shares_4hr = post.get("share_velocity_4hr", 0)
-
-    if views < effective_views_threshold:
-        return False
-    if eng_rate < tier_cfg["min_engagement_rate"] and eng_rate > 0:
-        return False
-    if shares_4hr < effective_shares_threshold and shares_4hr > 0:
+    effective_views = tier_cfg["min_views_in_6hr"] / tt_mult
+    if views < effective_views:
         return False
 
     return True
-def get_tier_number(tier_name: str) -> int:
-    return {"tier_1": 1, "tier_2": 2, "misc": 3}.get(tier_name, 3)
