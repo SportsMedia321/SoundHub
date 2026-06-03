@@ -284,7 +284,7 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
           onLoadedMetadata={() => { if (audioRef.current) audioRef.current.volume = newVol / 100; }} />
       )}
 
-      <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
         {(initialClips ?? []).length > 1 && (
           <div className="flex gap-[6px] overflow-x-auto pb-[2px]">
             {initialClips!.map((c) => (
