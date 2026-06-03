@@ -143,8 +143,6 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
   const [activeAudio, setActiveAudio] = useState<AudioTrack | null>(null);
   const [newVol, setNewVol] = useState(100);
   const [origVol, setOrigVol] = useState(0);
-  const [stripOrig, setStripOrig] = useState(true);
-  const [layerOrig, setLayerOrig] = useState(false);
   const [status, setStatus] = useState<"idle" | "composing" | "done" | "error">("idle");
   const [playing, setPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -164,8 +162,6 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
   useEffect(() => { if (tracks.length > 0 && !activeAudio) setActiveAudio(tracks[0]); }, [tracks]);
   useEffect(() => { if (videoRef.current) videoRef.current.volume = origVol / 100; }, [origVol]);
   useEffect(() => { if (audioRef.current) audioRef.current.volume = newVol / 100; }, [newVol]);
-  useEffect(() => { if (stripOrig) { setOrigVol(0); setLayerOrig(false); } }, [stripOrig]);
-  useEffect(() => { if (layerOrig) { setStripOrig(false); if (origVol === 0) setOrigVol(20); } }, [layerOrig]);
 
   useEffect(() => {
     const a = audioRef.current;
@@ -284,7 +280,7 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
           onLoadedMetadata={() => { if (audioRef.current) audioRef.current.volume = newVol / 100; }} />
       )}
 
-      <div style={{ flex: 1, overflowY: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 10, minHeight: 0 }}>
+      <div className="flex-1 overflow-y-auto p-[14px] flex flex-col gap-[10px]" style={{ minHeight: "min-content" }}>
         {(initialClips ?? []).length > 1 && (
           <div className="flex gap-[6px] overflow-x-auto pb-[2px]">
             {initialClips!.map((c) => (
@@ -343,7 +339,7 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
               </span>
               <span className="text-[9px] font-mono px-[7px] py-[3px] rounded"
                 style={{ background: "rgba(0,0,0,0.6)", color: origVol > 0 ? "#fbbf24" : "var(--br)", border: "0.5px solid rgba(255,255,255,0.15)" }}>
-                {origVol > 0 ? `orig ${origVol}% · new ${newVol}%` : `new audio ${newVol}%`}
+                {origVol > 0 ? `orig ${origVol}% · new ${newVol}%` : newVol > 0 ? `new audio ${newVol}%` : `audio muted`}
               </span>
             </div>
           </div>
@@ -383,7 +379,7 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
             trackDuration={clipDuration} showInTimeLabel={true} />
           {activeAudio ? (
             <WaveformBar heights={audioWF} progress={progress} color="#1d9bf0"
-              label={`Audio: ${activeAudio.name} · ${fmtDur(Math.round(audioTrimmedDuration))} selected`}
+              label={`${activeAudio.name} · starts at ${fmtDur(Math.round((audioIn / 100) * audioTrackDuration))} · ${fmtDur(Math.round(audioTrimmedDuration))} selected`}
               inPoint={audioIn} outPoint={audioOut} onInChange={setAudioIn} onOutChange={setAudioOut}
               trackDuration={audioTrackDuration} showInTimeLabel={true} />
           ) : (
@@ -400,27 +396,25 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
         {/* Audio mix */}
         <div className="rounded-[9px] border p-[11px]" style={{ background: "var(--s2)", borderColor: "var(--bo)" }}>
           <div className="text-[11px] font-medium mb-[8px]" style={{ color: "var(--t)" }}>Audio mix</div>
-          {[
-            { label: "New audio", val: newVol, set: setNewVol, color: "#1d9bf0" },
-            { label: "Original audio", val: origVol, set: setOrigVol, color: "#fbbf24" },
-          ].map(({ label, val, set, color }) => (
-            <div key={label} className="flex items-center gap-[8px] mb-[7px]">
-              <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: color }} />
-              <span className="text-[10px] w-[100px] flex-shrink-0" style={{ color: "var(--t2)" }}>{label}</span>
-              <input type="range" min={0} max={100} step={1} value={val} onChange={(e) => set(Number(e.target.value))} className="flex-1" />
-              <span className="text-[9px] font-mono w-[32px] text-right" style={{ color: "var(--t)" }}>{val}%</span>
-            </div>
-          ))}
-          <div className="pt-[6px] mt-[2px] border-t flex gap-[16px]" style={{ borderColor: "var(--bo)" }}>
-            {[{ label: "Strip original", val: stripOrig, set: setStripOrig }, { label: "Layer original", val: layerOrig, set: setLayerOrig }].map(({ label, val, set }) => (
-              <div key={label} className="flex items-center gap-[8px]">
-                <span className="text-[10px]" style={{ color: "var(--t)" }}>{label}</span>
-                <Toggle on={val} onChange={set} />
-              </div>
-            ))}
+
+          {/* New audio volume */}
+          <div className="flex items-center gap-[8px] mb-[7px]">
+            <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: "#1d9bf0" }} />
+            <span className="text-[10px] w-[100px] flex-shrink-0" style={{ color: "var(--t2)" }}>New audio</span>
+            <input type="range" min={0} max={100} step={1} value={newVol} onChange={(e) => setNewVol(Number(e.target.value))} className="flex-1" />
+            <span className="text-[9px] font-mono w-[32px] text-right" style={{ color: "var(--t)" }}>{newVol}%</span>
           </div>
+
+          {/* Original audio volume */}
+          <div className="flex items-center gap-[8px] mb-[4px]">
+            <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: "#fbbf24" }} />
+            <span className="text-[10px] w-[100px] flex-shrink-0" style={{ color: "var(--t2)" }}>Original audio</span>
+            <input type="range" min={0} max={100} step={1} value={origVol} onChange={(e) => setOrigVol(Number(e.target.value))} className="flex-1" />
+            <span className="text-[9px] font-mono w-[32px] text-right" style={{ color: "var(--t)" }}>{origVol}%</span>
+          </div>
+
           <div className="mt-[6px] text-[8px] font-mono" style={{ color: "var(--t3)" }}>
-            Sliders control live preview · same settings sent to FFmpeg on compose
+            0% = silent · 100% = full volume · sliders control live preview
           </div>
         </div>
 
