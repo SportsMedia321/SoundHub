@@ -11,7 +11,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
 
 // ── Clips ──────────────────────────────────────────────────────────────────
 export const getClips = (category?: string) =>
-  req<{ clips: Clip[] }>(`/clips${category ? `?category=${category}` : ""}`);
+  req<{ clips: Clip[] }>(`/clips?limit=150${category ? `&category=${category}` : ""}`);
 
 export const getClipStats = () => req<ClipStats>("/clips/stats");
 
