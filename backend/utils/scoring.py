@@ -68,14 +68,11 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
     Tier 1 (NFL/NBA): cutoff 19.5
     Tier 2 (MLB/NHL/MLS/US Intl): cutoff 22.0
     MISC: cutoff 24.0
-    Instagram special path: views-only scoring when engagement is zero.
+    Instagram fast pass: any post with 1M+ views passes regardless of engagement data.
     """
     viral_score = post.get("viral_score", 0)
     post_age_hr = post.get("post_event_hours", 999)
     views = post.get("views_at_ingest", 0)
-    likes = post.get("likes_at_ingest", 0)
-    comments = post.get("comments_at_ingest", 0)
-    shares = post.get("shares_at_ingest", 0)
 
     tier_cfg, tier_name = get_tier_config(category, thresholds)
 
@@ -83,29 +80,25 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
     if post_age_hr != 999 and post_age_hr > tier_cfg["recency_gate_hours"]:
         return False
 
-    # Views gate — Instagram often returns 0 views too so skip for IG
-    if platform != "instagram" and views < 1000:
+    # Views gate
+    if views < 1000 and platform != "instagram":
         return False
-    if platform == "instagram" and views == 0:
+    if views == 0:
         return False
 
-    # Instagram special path — engagement data unavailable via yt-dlp
-    # Score purely on views with a strong boost to compensate
-    engagement_available = likes > 0 or comments > 0 or shares > 0
-    if platform == "instagram" and not engagement_available:
-        # Views-only cutoffs — how many views in assumed 24hrs to qualify
+    # Instagram fast pass — bypass viral score entirely for high-view posts
+    # yt-dlp cannot reliably return engagement data from Instagram
+    # so we use raw view count as the primary signal
+    if platform == "instagram":
         instagram_views_cutoff = {
-            "tier_1": 1_000_000,   # 1M+ views for NFL/NBA
-            "tier_2": 1_500_000,   # 1.5M+ views for MLB/NHL/MLS
-            "misc":   2_000_000,   # 2M+ views for MISC
+            "tier_1": 1_000_000,
+            "tier_2": 1_500_000,
+            "misc":   2_000_000,
         }
         cutoff_views = instagram_views_cutoff.get(tier_name, 1_000_000)
-        passes = views >= cutoff_views
-        if not passes:
-            return False
-        return True
+        return views >= cutoff_views
 
-    # Standard path — full viral score with platform boosts
+    # Standard viral score path for TikTok and YouTube
     if viral_score > 0:
         min_score = {
             "tier_1": 19.5,
@@ -114,8 +107,7 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
         }
         cutoff = min_score.get(tier_name, 19.5)
         tiktok_boost = 1.35 if platform == "tiktok" else 1.0
-        instagram_boost = 1.15 if platform == "instagram" else 1.0
-        adjusted = viral_score * tiktok_boost * instagram_boost
+        adjusted = viral_score * tiktok_boost
         return adjusted >= cutoff
 
     # Fallback raw threshold checks
