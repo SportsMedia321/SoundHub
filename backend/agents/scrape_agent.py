@@ -477,32 +477,21 @@ def process_post(post: dict, category: str, account_type: str, discovery_method:
     post_data["viral_score"] = viral_score
 
     _, tier_name = get_tier_config(category, THRESHOLDS)
-    # Platform score boosts
-    tiktok_boost = 1.35 if platform == "tiktok" else 1.0
-    instagram_boost = 1.15 if platform == "instagram" else 1.0
-    adjusted = viral_score * tiktok_boost * instagram_boost
-
-    # Tier cutoffs
-    _, tier_name = get_tier_config(category, THRESHOLDS)
-    tier_cutoffs = {"tier_1": 19.5, "tier_2": 22.0, "misc": 24.0}
-    cutoff = tier_cutoffs.get(tier_name, 19.5)
-
-    # Recency gate — skip if age unknown (999), only reject if we have a confirmed old date
+    # Recency gate
     if age_hr != 999 and age_hr > 48:
-        print(f"    ✗ Rejected (age): {age_hr:.0f}hrs old category={category}")
+        print(f"    ✗ Rejected (age): {age_hr:.0f}hrs old platform={platform} category={category}")
         return False
 
-    # Minimum views gate
-    if views < 1000:
-        print(f"    ✗ Rejected (views): {views:,} views category={category}")
+    # Delegate all threshold decisions to passes_threshold in scoring.py
+    if not passes_threshold(post_data, category, platform, THRESHOLDS):
+        tiktok_boost = 1.35 if platform == "tiktok" else 1.0
+        adjusted = viral_score * tiktok_boost
+        print(f"    ✗ Rejected: raw={viral_score:.1f} adjusted={adjusted:.1f} views={views:,} platform={platform} category={category} age={age_hr:.0f}hrs")
         return False
 
-    # Viral score gate
-    if adjusted < cutoff:
-        print(f"    ✗ Rejected: raw={viral_score:.1f} adjusted={adjusted:.1f} cutoff={cutoff} views={views:,} platform={platform} category={category}")
-        return False
-
-    print(f"    ✓ Passed: raw={viral_score:.1f} adjusted={adjusted:.1f} cutoff={cutoff} views={views:,} platform={platform} category={category}")
+    tiktok_boost = 1.35 if platform == "tiktok" else 1.0
+    adjusted = viral_score * tiktok_boost
+    print(f"    ✓ Passed: raw={viral_score:.1f} adjusted={adjusted:.1f} views={views:,} platform={platform} category={category}")
 
     # Check pool capacity before downloading
     from db.client import get_db
