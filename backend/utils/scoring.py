@@ -91,9 +91,9 @@ def passes_threshold(post: dict, category: str, platform: str, thresholds: dict)
     # so we use raw view count as the primary signal
     if platform == "instagram":
         instagram_views_cutoff = {
-            "tier_1": 1_000_000,
-            "tier_2": 1_500_000,
-            "misc":   2_000_000,
+            "tier_1": 500_000,
+            "tier_2": 750_000,
+            "misc":   1_000_000,
         }
         cutoff_views = instagram_views_cutoff.get(tier_name, 1_000_000)
         return views >= cutoff_views
