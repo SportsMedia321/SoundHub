@@ -594,6 +594,18 @@ def run_scrape_cycle():
                 interleaved.append(yt[i])
 
     seeds = interleaved
+
+    # Deduplicate in case any account appears twice after interleaving
+    seen_handles = set()
+    deduped = []
+    for s in seeds:
+        key = f"{s['handle']}_{s['platform']}"
+        if key not in seen_handles:
+            seen_handles.add(key)
+            deduped.append(s)
+    seeds = deduped
+    print(f"Seeds loaded: {len(seeds)} unique accounts after deduplication")
+
     ingested = 0
     target = THRESHOLDS["global"]["target_clips_per_24hr"]
 
