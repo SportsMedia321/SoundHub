@@ -274,13 +274,13 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
   const audioWF = [30, 48, 22, 55, 38, 42, 28, 50, 35, 45, 20, 52, 40, 33, 48, 25, 55, 38, 44, 30, 50, 22, 45, 35];
 
   return (
-    <div className="flex flex-1 overflow-hidden min-h-0">
+    <div className="flex flex-1 min-h-0" style={{ overflow: "hidden" }}>
       {activeAudio?.preview_url && (
         <audio ref={audioRef} src={activeAudio.preview_url} preload="auto"
           onLoadedMetadata={() => { if (audioRef.current) audioRef.current.volume = newVol / 100; }} />
       )}
 
-      <div className="flex-1 overflow-y-auto p-[14px] flex flex-col gap-[10px]" style={{ minHeight: "min-content" }}>
+      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
         {(initialClips ?? []).length > 1 && (
           <div className="flex gap-[6px] overflow-x-auto pb-[2px]">
             {initialClips!.map((c) => (
@@ -371,50 +371,119 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
         <div className="rounded-[9px] border p-[12px] flex flex-col gap-[10px]" style={{ background: "var(--s2)", borderColor: "var(--bo)" }}>
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-medium" style={{ color: "var(--t)" }}>Timeline editor</span>
-            <span className="text-[8px] font-mono" style={{ color: "var(--t3)" }}>Drag handles to trim</span>
+            <span className="text-[8px] font-mono" style={{ color: "var(--t3)" }}>Drag handles to set in/out points</span>
           </div>
+
+          {/* Clip waveform */}
           <WaveformBar heights={clipWF} progress={progress} color="#00e87a"
             label={`Clip · ${fmtDur(Math.round(trimmedDuration))} of ${fmtDur(Math.round(clipDuration))} selected`}
             inPoint={clipIn} outPoint={clipOut} onInChange={setClipIn} onOutChange={setClipOut}
             trackDuration={clipDuration} showInTimeLabel={true} />
+
+          {/* Audio waveform */}
           {activeAudio ? (
-            <WaveformBar heights={audioWF} progress={progress} color="#1d9bf0"
-              label={`${activeAudio.name} · starts at ${fmtDur(Math.round((audioIn / 100) * audioTrackDuration))} · ${fmtDur(Math.round(audioTrimmedDuration))} selected`}
-              inPoint={audioIn} outPoint={audioOut} onInChange={setAudioIn} onOutChange={setAudioOut}
-              trackDuration={audioTrackDuration} showInTimeLabel={true} />
+            <>
+              <WaveformBar heights={audioWF} progress={progress} color="#1d9bf0"
+                label={`${activeAudio.name} · total duration ${fmtDur(Math.round(audioTrackDuration))}`}
+                inPoint={audioIn} outPoint={audioOut} onInChange={setAudioIn} onOutChange={setAudioOut}
+                trackDuration={audioTrackDuration} showInTimeLabel={true} />
+
+              {/* Audio selection info panel */}
+              <div className="rounded-[7px] p-[8px_10px] flex flex-col gap-[4px]"
+                style={{ background: "rgba(29,155,240,0.08)", border: "0.5px solid rgba(29,155,240,0.25)" }}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] font-mono" style={{ color: "#1d9bf0" }}>Audio selection</span>
+                  {loopCount > 1 && (
+                    <span className="text-[8px] font-mono px-[6px] py-[1px] rounded"
+                      style={{ background: "rgba(29,155,240,0.15)", color: "#1d9bf0" }}>
+                      loops {loopCount}x to fill clip
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-[16px] flex-wrap">
+                  <div className="flex items-center gap-[5px]">
+                    <span className="text-[8px] font-mono" style={{ color: "var(--t3)" }}>starts at</span>
+                    <span className="text-[10px] font-mono font-medium" style={{ color: "#fff" }}>
+                      {fmtDur(Math.round((audioIn / 100) * audioTrackDuration))}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-[5px]">
+                    <span className="text-[8px] font-mono" style={{ color: "var(--t3)" }}>ends at</span>
+                    <span className="text-[10px] font-mono font-medium" style={{ color: "#fff" }}>
+                      {fmtDur(Math.round((audioOut / 100) * audioTrackDuration))}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-[5px]">
+                    <span className="text-[8px] font-mono" style={{ color: "var(--t3)" }}>duration</span>
+                    <span className="text-[10px] font-mono font-medium" style={{ color: "#1d9bf0" }}>
+                      {fmtDur(Math.round(audioTrimmedDuration))}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-[5px]">
+                    <span className="text-[8px] font-mono" style={{ color: "var(--t3)" }}>clip needs</span>
+                    <span className="text-[10px] font-mono font-medium" style={{ color: "#00e87a" }}>
+                      {fmtDur(Math.round(trimmedDuration))}
+                    </span>
+                  </div>
+                </div>
+                {loopCount > 1 && (
+                  <div className="text-[8px] font-mono" style={{ color: "var(--t3)" }}>
+                    {fmtDur(Math.round((audioIn / 100) * audioTrackDuration))}–{fmtDur(Math.round((audioOut / 100) * audioTrackDuration))} repeats {loopCount}x · total audio: {fmtDur(Math.round(audioTrimmedDuration * loopCount))}
+                  </div>
+                )}
+              </div>
+            </>
           ) : (
-            <div className="text-[9px] font-mono" style={{ color: "var(--t3)" }}>Select an audio track to enable audio timeline</div>
-          )}
-          {activeAudio && loopCount > 1 && (
-            <div className="text-[8px] font-mono px-[8px] py-[4px] rounded-md"
-              style={{ background: "rgba(29,155,240,0.1)", color: "#1d9bf0", border: "0.5px solid rgba(29,155,240,0.3)" }}>
-              Audio loops {loopCount}x · trimmed audio {fmtDur(Math.round(audioTrimmedDuration))} fills {fmtDur(Math.round(trimmedDuration))} clip
+            <div className="text-[9px] font-mono py-[6px]" style={{ color: "var(--t3)" }}>
+              Select an audio track from the sidebar to enable audio timeline
             </div>
           )}
         </div>
 
         {/* Audio mix */}
         <div className="rounded-[9px] border p-[11px]" style={{ background: "var(--s2)", borderColor: "var(--bo)" }}>
-          <div className="text-[11px] font-medium mb-[8px]" style={{ color: "var(--t)" }}>Audio mix</div>
+          <div className="flex items-center justify-between mb-[8px]">
+            <span className="text-[11px] font-medium" style={{ color: "var(--t)" }}>Audio mix</span>
+            <span className="text-[8px] font-mono" style={{ color: "var(--t3)" }}>sliders control live preview</span>
+          </div>
 
-          {/* New audio volume */}
-          <div className="flex items-center gap-[8px] mb-[7px]">
-            <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: "#1d9bf0" }} />
-            <span className="text-[10px] w-[100px] flex-shrink-0" style={{ color: "var(--t2)" }}>New audio</span>
-            <input type="range" min={0} max={100} step={1} value={newVol} onChange={(e) => setNewVol(Number(e.target.value))} className="flex-1" />
-            <span className="text-[9px] font-mono w-[32px] text-right" style={{ color: "var(--t)" }}>{newVol}%</span>
+          {/* New audio volume — shows selected audio track name and start timestamp */}
+          <div className="mb-[10px]">
+            <div className="flex items-center justify-between mb-[4px]">
+              <div className="flex items-center gap-[5px]">
+                <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: "#1d9bf0" }} />
+                <span className="text-[10px]" style={{ color: "var(--t2)" }}>
+                  {activeAudio ? activeAudio.name : "New audio"}
+                </span>
+              </div>
+              {activeAudio && audioTrackDuration > 0 && (
+                <span className="text-[8px] font-mono" style={{ color: "#1d9bf0" }}>
+                  playing from {fmtDur(Math.round((audioIn / 100) * audioTrackDuration))}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-[8px]">
+              <input type="range" min={0} max={100} step={1} value={newVol}
+                onChange={(e) => setNewVol(Number(e.target.value))} className="flex-1" />
+              <span className="text-[9px] font-mono w-[32px] text-right" style={{ color: "var(--t)" }}>{newVol}%</span>
+            </div>
           </div>
 
           {/* Original audio volume */}
-          <div className="flex items-center gap-[8px] mb-[4px]">
-            <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: "#fbbf24" }} />
-            <span className="text-[10px] w-[100px] flex-shrink-0" style={{ color: "var(--t2)" }}>Original audio</span>
-            <input type="range" min={0} max={100} step={1} value={origVol} onChange={(e) => setOrigVol(Number(e.target.value))} className="flex-1" />
-            <span className="text-[9px] font-mono w-[32px] text-right" style={{ color: "var(--t)" }}>{origVol}%</span>
+          <div>
+            <div className="flex items-center gap-[5px] mb-[4px]">
+              <div className="w-[8px] h-[8px] rounded-full flex-shrink-0" style={{ background: "#fbbf24" }} />
+              <span className="text-[10px]" style={{ color: "var(--t2)" }}>Original audio</span>
+            </div>
+            <div className="flex items-center gap-[8px]">
+              <input type="range" min={0} max={100} step={1} value={origVol}
+                onChange={(e) => setOrigVol(Number(e.target.value))} className="flex-1" />
+              <span className="text-[9px] font-mono w-[32px] text-right" style={{ color: "var(--t)" }}>{origVol}%</span>
+            </div>
           </div>
 
-          <div className="mt-[6px] text-[8px] font-mono" style={{ color: "var(--t3)" }}>
-            0% = silent · 100% = full volume · sliders control live preview
+          <div className="mt-[8px] text-[8px] font-mono" style={{ color: "var(--t3)" }}>
+            0% = silent · 100% = full volume
           </div>
         </div>
 
