@@ -153,6 +153,7 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
   const [clipOut, setClipOut] = useState(100);
   const [audioIn, setAudioIn] = useState(0);
   const [audioOut, setAudioOut] = useState(100);
+  const [audioDuration, setAudioDuration] = useState(0);
 
   useEffect(() => { if (initialClips && initialClips.length > 0) setActiveClip(initialClips[0]); }, [initialClips]);
 
@@ -267,20 +268,25 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
   const cc = categoryColor(activeClip.sport_category);
   const clipDuration = duration || activeClip.duration_seconds || 0;
   const trimmedDuration = ((clipOut - clipIn) / 100) * clipDuration;
-  const audioTrackDuration = activeAudio?.duration_seconds || 0;
+  const audioTrackDuration = audioDuration || activeAudio?.duration_seconds || 0;
   const audioTrimmedDuration = ((audioOut - audioIn) / 100) * audioTrackDuration;
   const loopCount = audioTrimmedDuration > 0 ? Math.ceil(trimmedDuration / audioTrimmedDuration) : 1;
   const clipWF = [...WF, 45, 30, 52, 38, 48, 22, 55, 33, 44, 28, 50, 36];
   const audioWF = [30, 48, 22, 55, 38, 42, 28, 50, 35, 45, 20, 52, 40, 33, 48, 25, 55, 38, 44, 30, 50, 22, 45, 35];
 
   return (
-    <div className="flex flex-1 min-h-0" style={{ overflow: "hidden" }}>
+    <div style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
       {activeAudio?.preview_url && (
         <audio ref={audioRef} src={activeAudio.preview_url} preload="auto"
-          onLoadedMetadata={() => { if (audioRef.current) audioRef.current.volume = newVol / 100; }} />
+          onLoadedMetadata={() => {
+            if (audioRef.current) {
+              audioRef.current.volume = newVol / 100;
+              setAudioDuration(audioRef.current.duration || 0);
+            }
+          }} />
       )}
 
-      <div style={{ flex: 1, overflowY: "auto", overflowX: "hidden", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", overflowX: "hidden", padding: 14, display: "flex", flexDirection: "column", gap: 10 }}>
         {(initialClips ?? []).length > 1 && (
           <div className="flex gap-[6px] overflow-x-auto pb-[2px]">
             {initialClips!.map((c) => (
@@ -302,7 +308,7 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
           </div>
 
           {/* Video */}
-          <div className="relative w-full" style={{ height: 520, background: "#000" }}
+          <div className="relative w-full" style={{ height: 280, background: "#000" }}
             onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
             {activeClip.preview_url ? (
               <video ref={videoRef} src={activeClip.preview_url} className="w-full h-full" style={{ objectFit: "contain", maxHeight: 520 }}
@@ -513,7 +519,7 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
       </div>
 
       {/* Audio sidebar */}
-      <div className="w-[220px] flex-shrink-0 border-l flex flex-col gap-[10px] p-[12px] overflow-y-auto" style={{ background: "var(--s1)", borderColor: "var(--bo)" }}>
+      <div className="w-[220px] flex-shrink-0 border-l flex flex-col gap-[10px] p-[12px]" style={{ overflowY: "auto", minHeight: 0 }} style={{ background: "var(--s1)", borderColor: "var(--bo)" }}>
         <div className="text-[11px] font-medium" style={{ color: "var(--t)" }}>Audio library</div>
         <div className="text-[9px] font-mono" style={{ color: "var(--t2)" }}>Select track · preview mixes live</div>
         {audioLoading ? <Spinner /> : tracks.length === 0 ? <Empty label="Upload audio tracks first" /> : (
@@ -522,7 +528,7 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
               const active = activeAudio?.id === track.id;
               const hasNative = Object.keys(track.platform_native ?? {}).length > 0;
               return (
-                <div key={track.id} onClick={() => { setActiveAudio(track); setAudioIn(0); setAudioOut(100); if (playing) { videoRef.current?.pause(); audioRef.current?.pause(); setPlaying(false); } }}
+                <div key={track.id} onClick={() => { setActiveAudio(track); setAudioIn(0); setAudioOut(100); setAudioDuration(0); if (playing) { videoRef.current?.pause(); audioRef.current?.pause(); setPlaying(false); } }}
                   className="flex items-center gap-[8px] px-[10px] py-[8px] cursor-pointer transition-all border-b last:border-0"
                   style={{ background: active ? "var(--brd)" : "transparent", borderColor: "var(--bo)", borderLeft: active ? "2px solid var(--br)" : "2px solid transparent" }}>
                   <div className="w-7 h-7 rounded-[6px] flex items-center justify-center flex-shrink-0 text-[10px] font-bold font-mono border"
