@@ -519,7 +519,7 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
       </div>
 
       {/* Audio sidebar */}
-      <div className="w-[220px] flex-shrink-0 border-l flex flex-col gap-[10px] p-[12px]" style={{ overflowY: "auto", minHeight: 0 }} style={{ background: "var(--s1)", borderColor: "var(--bo)" }}>
+      <div className="w-[220px] flex-shrink-0 border-l flex flex-col gap-[10px] p-[12px]" style={{ overflowY: "auto", minHeight: 0, background: "var(--s1)", borderColor: "var(--bo)" }}>
         <div className="text-[11px] font-medium" style={{ color: "var(--t)" }}>Audio library</div>
         <div className="text-[9px] font-mono" style={{ color: "var(--t2)" }}>Select track · preview mixes live</div>
         {audioLoading ? <Spinner /> : tracks.length === 0 ? <Empty label="Upload audio tracks first" /> : (
