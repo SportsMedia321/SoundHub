@@ -43,7 +43,7 @@ def render_clip_to_file(
     """
     import subprocess
     import tempfile
-    from utils.r2 import download_file, get_db_audio_path
+    from utils.r2 import download_file
 
     clip_id = clip_data["id"]
     video_r2_key = clip_data.get("video_r2_key")
