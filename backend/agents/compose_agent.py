@@ -94,10 +94,10 @@ def render_clip_to_file(
     else:
         cmd += ["-af", f"volume={orig_vol}"]
 
-    cmd += ["-c:v", "libx264", "-c:a", "aac", "-shortest", out_path]
+    cmd += ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "28", "-c:a", "aac", "-shortest", out_path]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, timeout=120)
+        result = subprocess.run(cmd, capture_output=True, timeout=240)
         if result.returncode != 0:
             print(f"FFmpeg failed: {result.stderr.decode()[:300]}")
             return None
