@@ -266,6 +266,22 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
       setStatus("error");
     }
   };
+  const handleCompose = async () => {
+    if (!activeClip) return;
+    setStatus("composing");
+    try {
+      await composeClip({
+        clip_id: activeClip.id,
+        audio_id: activeAudio?.id,
+        new_vol: newVol / 100,
+        orig_vol: origVol / 100,
+      });
+      setStatus("done");
+      setTimeout(() => { onQueued(); }, 1200);
+    } catch {
+      setStatus("error");
+    }
+  };
 
   if (!activeClip) {
     return (
