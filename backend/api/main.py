@@ -84,7 +84,44 @@ class ComposePayload(BaseModel):
     audio_id: str | None = None
     new_vol: float = 1.0
     orig_vol: float = 0.0
+    clip_in: float = 0.0
+    clip_out: float = 1.0
+    audio_in: float = 0.0
+    audio_out: float = 1.0
 
+from fastapi.responses import FileResponse
+
+@app.post("/compose/download")
+async def compose_download(payload: ComposePayload):
+    """Compose synchronously and return the file directly for download — no DB record, no queue."""
+    from db.client import get_db
+    from agents.compose_agent import render_clip_to_file
+
+    db = get_db()
+    clip_result = db.table("clips").select("*").eq("id", payload.clip_id).execute()
+    if not clip_result.data:
+        raise HTTPException(404, "Clip not found")
+    clip_data = clip_result.data[0]
+
+    local_path = render_clip_to_file(
+        clip_data=clip_data,
+        audio_id=payload.audio_id,
+        new_vol=payload.new_vol,
+        orig_vol=payload.orig_vol,
+        clip_in=payload.clip_in if hasattr(payload, "clip_in") else 0.0,
+        clip_out=payload.clip_out if hasattr(payload, "clip_out") else 1.0,
+        audio_in=payload.audio_in if hasattr(payload, "audio_in") else 0.0,
+        audio_out=payload.audio_out if hasattr(payload, "audio_out") else 1.0,
+    )
+
+    if not local_path:
+        raise HTTPException(500, "Compose render failed")
+
+    return FileResponse(
+        local_path,
+        media_type="video/mp4",
+        filename=f"soundhub_{payload.clip_id}.mp4",
+    )
 
 @app.post("/compose")
 async def compose(payload: ComposePayload, background_tasks: BackgroundTasks):
