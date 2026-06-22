@@ -521,7 +521,9 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
 
         {/* Actions */}
         <div className="flex gap-[8px]">
-          <Btn size="md" className="flex-1">Save draft</Btn>
+          <Btn size="md" className="flex-1" disabled={status === "composing"} onClick={handleDownload}>
+            {status === "composing" ? "Rendering..." : "Download ⬇"}
+          </Btn>
           <Btn size="md" variant="primary" className="flex-1" disabled={status === "composing"} onClick={handleCompose}>
             {status === "composing" ? "Composing..." : status === "done" ? "Added to queue ✓" : "Add to queue ↗"}
           </Btn>
