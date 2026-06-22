@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import useSWR from "swr";
-import { getAudio, composeClip, type Clip, type AudioTrack } from "../../lib/api";
+import { getAudio, composeClip, downloadComposedClip, type Clip, type AudioTrack } from "../../lib/api";
 import { fmtViews, platformColor, categoryColor, timeAgo, fmtDur } from "../../lib/utils";
 import { Btn, Toggle, Empty, Spinner } from "../ui";
 
