@@ -25,6 +25,33 @@ export const composeClip = (payload: ComposePayload) =>
     body: JSON.stringify(payload),
   });
 
+export async function downloadComposedClip(payload: {
+  clip_id: string;
+  audio_id?: string;
+  new_vol: number;
+  orig_vol: number;
+  clip_in?: number;
+  clip_out?: number;
+  audio_in?: number;
+  audio_out?: number;
+}) {
+  const res = await fetch(`${BASE}/compose/download`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) throw new Error("Download failed");
+  const blob = await res.blob();
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `soundhub_${payload.clip_id}.mp4`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 // ── Queue ──────────────────────────────────────────────────────────────────
 export const getQueue = () => req<{ posts: Post[] }>("/queue");
 
