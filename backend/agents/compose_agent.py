@@ -16,7 +16,7 @@ from db.client import (
     get_db, insert_post, mark_clip_composed, get_audio_by_id,
     increment_audio_use, add_training_note, generate_id, now_iso
 )
-from utils.r2 import download_file, upload_composed_clip, delete_file as r2_delete
+from utils.r2 import download_file
 from utils.caption_gen import generate_caption_and_hashtags
 
 
@@ -26,6 +26,85 @@ PLATFORM_SPECS = {
     "youtube":   {"aspect": "9:16", "max_dur": 59,  "width": 1080, "height": 1920},
 }
 
+def render_clip_to_file(
+    clip_data: dict,
+    audio_id: str | None,
+    new_vol: float,
+    orig_vol: float,
+    clip_in: float = 0.0,
+    clip_out: float = 1.0,
+    audio_in: float = 0.0,
+    audio_out: float = 1.0,
+) -> str | None:
+    """
+    Render a single composed clip to a local file synchronously.
+    Used for direct download — does not touch the database or R2.
+    Returns the local file path or None on failure.
+    """
+    import subprocess
+    import tempfile
+    from utils.r2 import download_file, get_db_audio_path
+
+    clip_id = clip_data["id"]
+    video_r2_key = clip_data.get("video_r2_key")
+    if not video_r2_key:
+        print("No video_r2_key on clip")
+        return None
+
+    tmp_dir = tempfile.mkdtemp()
+    raw_path = f"{tmp_dir}/raw_{clip_id}.mp4"
+    out_path = f"{tmp_dir}/out_{clip_id}.mp4"
+
+    # Download raw clip from R2
+    download_file(video_r2_key, raw_path)
+
+    duration = clip_data.get("duration_seconds", 0) or 0
+    start_sec = clip_in * duration
+    end_sec = clip_out * duration
+    trimmed_len = max(end_sec - start_sec, 0.5)
+
+    audio_path = None
+    if audio_id:
+        from db.client import get_db
+        db = get_db()
+        audio_result = db.table("audio_library").select("*").eq("id", audio_id).execute()
+        if audio_result.data:
+            audio_r2_key = audio_result.data[0].get("r2_key")
+            if audio_r2_key:
+                audio_path = f"{tmp_dir}/audio_{audio_id}.mp3"
+                download_file(audio_r2_key, audio_path)
+
+    # Build ffmpeg command
+    cmd = ["ffmpeg", "-y", "-ss", str(start_sec), "-t", str(trimmed_len), "-i", raw_path]
+
+    if audio_path and new_vol > 0:
+        audio_duration_full = clip_data.get("audio_duration_seconds", 0) or 9999
+        a_start = audio_in * audio_duration_full
+        cmd += ["-stream_loop", "-1", "-ss", str(a_start), "-i", audio_path]
+        filter_complex = (
+            f"[0:a]volume={orig_vol}[a0];"
+            f"[1:a]volume={new_vol}[a1];"
+            f"[a0][a1]amix=inputs=2:duration=first[aout]"
+        )
+        cmd += [
+            "-filter_complex", filter_complex,
+            "-map", "0:v", "-map", "[aout]",
+            "-t", str(trimmed_len),
+        ]
+    else:
+        cmd += ["-af", f"volume={orig_vol}"]
+
+    cmd += ["-c:v", "libx264", "-c:a", "aac", "-shortest", out_path]
+
+    try:
+        result = subprocess.run(cmd, capture_output=True, timeout=120)
+        if result.returncode != 0:
+            print(f"FFmpeg failed: {result.stderr.decode()[:300]}")
+            return None
+        return out_path if os.path.exists(out_path) else None
+    except Exception as e:
+        print(f"Render error: {e}")
+        return None
 
 # ── FFmpeg core ────────────────────────────────────────────────────────────
 
