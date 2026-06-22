@@ -92,3 +92,9 @@ def delete_clip_files(clip_id: str, platforms: list = None):
     for plat in (platforms or ["tiktok", "instagram", "youtube"]):
         keys.append(f"clips/composed/{clip_id}_{plat}.mp4")
     delete_files(keys)
+
+def download_file(r2_key: str, local_path: str):
+    """Download a file from R2 to a local path."""
+    r2 = get_r2()
+    bucket = os.environ.get("R2_BUCKET_NAME")
+    r2.download_file(bucket, r2_key, local_path)
