@@ -247,14 +247,24 @@ export default function Compose({ initialClips, onQueued }: { initialClips?: Cli
     }
   }, [clipIn, clipOut, audioIn, audioOut]);
 
-  const handleCompose = async () => {
+  const handleDownload = async () => {
     if (!activeClip) return;
     setStatus("composing");
     try {
-      await composeClip({ clip_id: activeClip.id, audio_id: activeAudio?.id, new_vol: newVol / 100, orig_vol: origVol / 100 });
-      setStatus("done");
-      setTimeout(() => { onQueued(); }, 1200);
-    } catch { setStatus("error"); }
+      await downloadComposedClip({
+        clip_id: activeClip.id,
+        audio_id: activeAudio?.id,
+        new_vol: newVol / 100,
+        orig_vol: origVol / 100,
+        clip_in: clipIn / 100,
+        clip_out: clipOut / 100,
+        audio_in: audioIn / 100,
+        audio_out: audioOut / 100,
+      });
+      setStatus("idle");
+    } catch {
+      setStatus("error");
+    }
   };
 
   if (!activeClip) {
