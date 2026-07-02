@@ -74,27 +74,45 @@ def render_clip_to_file(
                 audio_path = f"{tmp_dir}/audio_{audio_id}.mp3"
                 download_file(audio_r2_key, audio_path)
 
-    # Build ffmpeg command
-    cmd = ["ffmpeg", "-y", "-ss", str(start_sec), "-t", str(trimmed_len), "-i", raw_path]
+    # Fingerprint destruction — randomized micro-shifts break platform content ID
+    import random
+    speed = round(random.uniform(1.01, 1.03), 3)
+    pitch = round(random.uniform(0.97, 1.03), 3)
+    crop_px = random.randint(2, 6)
+
+    video_filter = (
+        f"crop=iw-{crop_px*2}:ih-{crop_px*2}:{crop_px}:{crop_px},"
+        f"scale=-2:720,"
+        f"setpts={round(1/speed, 4)}*PTS"
+    )
+
+    adjusted_len = round(trimmed_len / speed, 2)
 
     if audio_path and new_vol > 0:
         audio_duration_full = clip_data.get("audio_duration_seconds", 0) or 9999
         a_start = audio_in * audio_duration_full
-        cmd += ["-stream_loop", "-1", "-ss", str(a_start), "-i", audio_path]
         filter_complex = (
-            f"[0:a]volume={orig_vol}[a0];"
-            f"[1:a]volume={new_vol}[a1];"
+            f"[0:a]volume={orig_vol},asetrate=44100*{pitch},aresample=44100[a0];"
+            f"[1:a]volume={new_vol},asetrate=44100*{pitch},aresample=44100[a1];"
             f"[a0][a1]amix=inputs=2:duration=first[aout]"
         )
-        cmd += [
-            "-filter_complex", filter_complex,
-            "-map", "0:v", "-map", "[aout]",
-            "-t", str(trimmed_len),
-        ]
+        cmd = ["ffmpeg", "-y",
+               "-ss", str(start_sec), "-t", str(trimmed_len), "-i", raw_path,
+               "-stream_loop", "-1", "-ss", str(a_start), "-i", audio_path,
+               "-vf", video_filter,
+               "-filter_complex", filter_complex,
+               "-map", "0:v", "-map", "[aout]",
+               "-t", str(adjusted_len),
+               "-c:v", "libx264", "-preset", "ultrafast", "-crf", "30",
+               "-c:a", "aac", "-map_metadata", "-1", "-shortest", out_path]
     else:
-        cmd += ["-af", f"volume={orig_vol}"]
-
-    cmd += ["-c:v", "libx264", "-preset", "ultrafast", "-crf", "28", "-c:a", "aac", "-shortest", out_path]
+        cmd = ["ffmpeg", "-y",
+               "-ss", str(start_sec), "-t", str(trimmed_len), "-i", raw_path,
+               "-vf", video_filter,
+               "-af", f"volume={orig_vol},asetrate=44100*{pitch},aresample=44100",
+               "-t", str(adjusted_len),
+               "-c:v", "libx264", "-preset", "ultrafast", "-crf", "30",
+               "-c:a", "aac", "-map_metadata", "-1", "-shortest", out_path]
 
     try:
         result = subprocess.run(cmd, capture_output=True, timeout=240)
