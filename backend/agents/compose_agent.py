@@ -77,12 +77,21 @@ def render_clip_to_file(
     # Fingerprint destruction — randomized micro-shifts break platform content ID
     import random
     speed = round(random.uniform(1.01, 1.03), 3)
-    pitch = round(random.uniform(0.97, 1.03), 3)
+    pitch = round(random.uniform(0.94, 1.06), 3)
     crop_px = random.randint(2, 6)
+
+    # Randomized color grading breaks perceptual hash matching
+    brightness = round(random.uniform(-0.03, 0.03), 3)
+    saturation = round(random.uniform(0.95, 1.05), 3)
+    contrast = round(random.uniform(0.97, 1.03), 3)
+    zoom = round(random.uniform(1.02, 1.04), 3)
 
     video_filter = (
         f"crop=iw-{crop_px*2}:ih-{crop_px*2}:{crop_px}:{crop_px},"
+        f"scale=iw*{zoom}:ih*{zoom},"
+        f"crop=iw/{zoom}:ih/{zoom},"
         f"scale=-2:720,"
+        f"eq=brightness={brightness}:saturation={saturation}:contrast={contrast},"
         f"setpts={round(1/speed, 4)}*PTS"
     )
 
